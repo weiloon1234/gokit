@@ -8,7 +8,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"    // For file source migrations
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	core "github.com/weiloon1234/gokit"
+	"github.com/weiloon1234/gokit"
 	"os/exec"
 	"strconv"
 )
@@ -19,7 +19,7 @@ var MigrateCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		action := args[0]
-		config := core.GetSharedConfig()
+		config := gokit.GetSharedConfig()
 
 		dsn := config.DBConfig.DSN
 		if dsn == "" {
