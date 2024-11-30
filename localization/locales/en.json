@@ -1,0 +1,9 @@
+{
+  "Hello world with :attribute": "Hello :attribute",
+  "validation.required": "The :attribute field is required.",
+  "validation.email": "The :attribute must be a valid email address.",
+  "validation.min": "The :attribute must be at least :min characters.",
+  "validation.max": "The :attribute must not exceed :max characters.",
+  "validation.alphanumeric": "The :attribute must be alphanumeric",
+  "validation.unknown": "The :attribute has an unknown rule: :rule."
+}

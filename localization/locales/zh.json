@@ -1,0 +1,11 @@
+{
+  "Hello world":                 "你好，世界",
+  "Hello world with :attribute": "你好，:attribute",
+  "Email":                       "电子邮件地址",
+  "validation.required": ":attribute 字段是必填项。",
+  "validation.email": ":attribute 必须是有效的电子邮件地址。",
+  "validation.min": ":attribute 必须至少有 :min 个字符。",
+  "validation.max": ":attribute 不得超过 :max 个字符。",
+  "validation.alphanumeric": ":attribute 必须是字母与数字组合",
+  "validation.unknown": ":attribute 包含未知规则：:rule。"
+}
