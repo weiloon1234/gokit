@@ -85,3 +85,12 @@ func UploadImage(c *gin.Context, fileHeader *multipart.FileHeader) (string, erro
 	// Upload the image
 	return storage.GetManager().Upload(fileHeader.Filename, file, fileHeader.Header.Get("Content-Type"))
 }
+
+func GetFile(filePath string) string {
+	fileUrl, err := storage.GetManager().Get(filePath)
+	if err != nil {
+		return ""
+	}
+
+	return fileUrl
+}
