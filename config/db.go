@@ -52,21 +52,30 @@ func (c *DBConfig) BuildConfig() {
 }
 
 func (c *DBConfig) GetDSN() string {
-	if c.ConfigBuilt != true {
-		c.BuildConfig()
-	}
-
 	if c.DSN == "" {
-		c.DSN = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=%t&loc=%s",
-			c.Username,
-			c.Password,
-			c.Host,
-			c.Port,
-			c.DatabaseName,
-			c.Charset,
-			c.ParseTime,
-			c.TimeZone,
-		)
+		// Format the DSN differently if the password is empty
+		if c.Password == "" {
+			c.DSN = fmt.Sprintf("%s@tcp(%s:%s)/%s?charset=%s&parseTime=%t&loc=%s",
+				c.Username,
+				c.Host,
+				c.Port,
+				c.DatabaseName,
+				c.Charset,
+				c.ParseTime,
+				c.TimeZone,
+			)
+		} else {
+			c.DSN = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=%t&loc=%s",
+				c.Username,
+				c.Password,
+				c.Host,
+				c.Port,
+				c.DatabaseName,
+				c.Charset,
+				c.ParseTime,
+				c.TimeZone,
+			)
+		}
 	}
 
 	return c.DSN
