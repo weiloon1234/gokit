@@ -1,16 +1,12 @@
 package config
 
-import (
-	"time"
-)
-
 type AppConfig struct {
 	AppName  string
 	AppEnv   string
 	AppPort  string
 	Debug    bool
 	LogLevel string
-	Timezone time.Location
+	Timezone string // Use a string to represent the timezone name
 }
 
 func (ac *AppConfig) BuildConfig() {
@@ -32,5 +28,10 @@ func (ac *AppConfig) BuildConfig() {
 
 	if ac.LogLevel == "" {
 		ac.LogLevel = "info"
+	}
+
+	// Set a default timezone if none is provided
+	if ac.Timezone == "" {
+		ac.Timezone = "UTC"
 	}
 }

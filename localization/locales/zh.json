@@ -5,6 +5,7 @@
   "File type :exts is not a valid image or disallowed": "文件 :exts 并不是有限的图片格式或不允许",
   "File type :exts is not a valid file or disallowed": "文件 :exts 并不是有限的文件格式或不允许",
   "File size exceeds the maximum limit of :size": "文件大小已超过允许的范围（:size）",
+  "record not found": "记录不存在",
   "validation.required": ":attribute 字段是必填项。",
   "validation.email": ":attribute 必须是有效的电子邮件地址。",
   "validation.min": ":attribute 必须至少有 :min 个字符。",

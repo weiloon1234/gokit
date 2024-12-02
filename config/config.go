@@ -36,7 +36,7 @@ func (cfg *Config) BuildConfig() {
 
 func (cfg *Config) BuildApp() {
 	// SetTimezone configures the application's timezone based on a string.
-	timezoneStr := cfg.AppConfig.Timezone.String()
+	timezoneStr := cfg.AppConfig.Timezone
 	loc, err := time.LoadLocation(timezoneStr)
 	if err != nil {
 		panic(fmt.Sprintf("Invalid TIMEZONE value: %q, error: %v", timezoneStr, err))
