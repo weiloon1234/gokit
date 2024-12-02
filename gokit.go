@@ -40,7 +40,7 @@ type UploadConfig = storage.UploadConfig
 // Config holds configuration for all components
 type Config struct {
 	DBConfig           *DBConfig
-	RedisConfig        RedisConfig
+	RedisConfig        *RedisConfig
 	LocalizationConfig LocaleConfig
 	Timezone           string
 	StorageProvider    string
