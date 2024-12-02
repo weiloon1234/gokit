@@ -13,7 +13,6 @@ var GlobalDBConfig *config.DBConfig
 func Init(config *config.DBConfig) error {
 	var err error
 
-	config.BuildConfig()
 	SetGlobalDBConfig(config)
 
 	db, err = gorm.Open(mysql.Open(config.GetDSN()), &gorm.Config{})
