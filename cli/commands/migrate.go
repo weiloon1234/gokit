@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/weiloon1234/gokit"
+	"github.com/weiloon1234/gokit/database"
 	"os/exec"
 	"strconv"
 )
@@ -35,10 +36,10 @@ var MigrateCmd = &cobra.Command{
 			return createMigration(migrationName)
 
 		case "up":
-			return runMigration(dsn, "up")
+			return runMigration("up")
 
 		case "down":
-			return runMigration(dsn, "down")
+			return runMigration("down")
 
 		case "force":
 			if len(args) < 2 {
@@ -48,7 +49,7 @@ var MigrateCmd = &cobra.Command{
 			if err != nil {
 				return fmt.Errorf("invalid version number: %v", err)
 			}
-			return forceMigration(dsn, version)
+			return forceMigration(version)
 
 		default:
 			return fmt.Errorf("unknown action: %s. Available actions: create, up, down, force", action)
@@ -68,8 +69,8 @@ func createMigration(name string) error {
 	return nil
 }
 
-func runMigration(dsn string, direction string) error {
-	m, err := migrate.New("file://database/migrations", dsn)
+func runMigration(direction string) error {
+	m, err := migrate.New("file://database/migrations", database.GetGlobalDBConfig().GetDSN())
 	if err != nil {
 		return fmt.Errorf("migration setup failed: %v", err)
 	}
@@ -91,8 +92,8 @@ func runMigration(dsn string, direction string) error {
 	return nil
 }
 
-func forceMigration(dsn string, version int) error {
-	m, err := migrate.New("file://database/migrations", dsn)
+func forceMigration(version int) error {
+	m, err := migrate.New("file://database/migrations", database.GetGlobalDBConfig().GetDSN())
 	if err != nil {
 		return fmt.Errorf("migration setup failed: %v", err)
 	}

@@ -9,8 +9,10 @@ import (
 	"github.com/weiloon1234/gokit/localization"
 	"github.com/weiloon1234/gokit/middleware"
 	"github.com/weiloon1234/gokit/storage"
+	"io"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -37,7 +39,7 @@ type UploadConfig = storage.UploadConfig
 
 // Config holds configuration for all components
 type Config struct {
-	DBConfig           DBConfig
+	DBConfig           *DBConfig
 	RedisConfig        RedisConfig
 	LocalizationConfig LocaleConfig
 	Timezone           string
@@ -170,7 +172,13 @@ func sendTelegramMessage(message string) {
 		log.Printf("Failed to send Telegram message: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			log.Printf("Failed to close Telegram message: %v", err)
+		}
+	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("Telegram API error: %s", resp.Status)
@@ -194,6 +202,15 @@ func throttleLog(message string) bool {
 
 func InitRouter(config GinConfig) *gin.Engine {
 	sharedGinConfig = config
+
+	// Set up custom logging
+	if config.LogFile != "" {
+		file, err := os.OpenFile(config.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			log.Fatalf("Failed to open log file: %v", err)
+		}
+		gin.DefaultWriter = io.MultiWriter(file, os.Stdout)
+	}
 
 	// Ensure customLogger implements io.Writer
 	gin.DefaultWriter = customLogger{}
