@@ -2,19 +2,17 @@ package localization
 
 import (
 	"embed"
-	"encod
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"os"
 	"path/filepath"
-	"embed"
+	"strings"
 )
 
-ed predefined locale files
-//
-//
 // Embed predefined locale files
+//
+//go:embed locales/*.j
 //go:embed locales/*.json
 var embeddedLocales embed.FS
 
