@@ -133,7 +133,6 @@ func Init(config Config) {
 	}
 
 	log.Println("gokit initialized successfully")
-
 }
 
 var (

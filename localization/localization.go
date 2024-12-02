@@ -139,6 +139,7 @@ func TranslateKey(locale, key string, attributes map[string]string) string {
 		return key // Return the key itself if no translation is found
 	}
 
+	// Replace attributes in the translation
 	for attrKey, attrValue := range attributes {
 		translation = replaceAttribute(translation, attrKey, attrValue)
 	}
