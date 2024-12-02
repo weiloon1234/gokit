@@ -1,6 +1,8 @@
 {
   "Hello world with :attribute": "Hello :attribute",
-  "File type :exts is not a valid image": "File :exts is not a valid image",
+  "File type :exts is not a valid image or disallowed": "File :exts is not a valid image or disallowed",
+  "File type :exts is not a valid file or disallowed": "File :exts is not a valid file or disallowed",
+  "File size exceeds the maximum limit of :size": "File size exceed the maximum limit of :size",
   "validation.required": "The :attribute field is required.",
   "validation.email": "The :attribute must be a valid email address.",
   "validation.min": "The :attribute must be at least :min characters.",

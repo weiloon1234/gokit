@@ -20,7 +20,9 @@ func ValidateFile(c *gin.Context, fileHeader *multipart.FileHeader) error {
 
 	fileType := fileHeader.Header.Get("Content-Type")
 	if len(cfg.AllowedFileTypes) > 0 && !Contains(cfg.AllowedFileTypes, fileType) {
-		return fmt.Errorf("file type '%s' is not allowed", fileType)
+		return fmt.Errorf(localization.Translate(c, "File type :exts is not a valid file or disallowed", map[string]string{
+			"exts": ExtractExtension(fileType),
+		}))
 	}
 
 	return nil
@@ -32,7 +34,7 @@ func ValidateImage(c *gin.Context, fileHeader *multipart.FileHeader) error {
 
 	fileType := fileHeader.Header.Get("Content-Type")
 	if len(cfg.AllowedImageTypes) > 0 && !Contains(cfg.AllowedImageTypes, fileType) {
-		return fmt.Errorf(localization.Translate(c, "File type :exts is not a valid image", map[string]string{
+		return fmt.Errorf(localization.Translate(c, "File type :exts is not a valid image or disallowed", map[string]string{
 			"exts": ExtractExtension(fileType),
 		}))
 	}
