@@ -1,11 +1,19 @@
 package gokit
 
 import (
+	"bytes"
+	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/weiloon1234/gokit/database"
 	"github.com/weiloon1234/gokit/environment"
 	"github.com/weiloon1234/gokit/localization"
+	"github.com/weiloon1234/gokit/middleware"
 	"github.com/weiloon1234/gokit/storage"
 	"log"
+	"net/http"
+	"runtime"
+	"sync"
+	"time"
 )
 
 // Features to toggle optional components
@@ -39,8 +47,25 @@ type Config struct {
 	Features           Features
 }
 
+type GinConfig struct {
+	LogFile                       string
+	FatalErrorInformTelegram      bool
+	TelegramBotToken              string
+	TelegramChatId                string
+	TelegramMessageThrottleMinute time.Duration
+}
+
+func (c GinConfig) GetTelegramMessageThrottleMinute() time.Duration {
+	// If not set, return the default value
+	if c.TelegramMessageThrottleMinute == 0 {
+		return 10 * time.Minute // Default throttle duration
+	}
+	return c.TelegramMessageThrottleMinute
+}
+
 // Shared configuration accessible by other packages
 var sharedConfig Config
+var sharedGinConfig GinConfig
 
 // NewDefaultFeatures returns Features with all flags set to true
 func NewDefaultFeatures() Features {
@@ -106,6 +131,82 @@ func Init(config Config) {
 	}
 
 	log.Println("gokit initialized successfully")
+
+}
+
+var (
+	logCache      = make(map[string]time.Time)
+	logCacheMutex sync.Mutex
+)
+
+type customLogger struct{}
+
+func (cl customLogger) Write(p []byte) (n int, err error) {
+	// Extract file and line for throttling
+	_, file, line, ok := runtime.Caller(3)
+	logMessage := fmt.Sprintf("%s:%d - %s", file, line, string(p))
+	if !ok {
+		logMessage = string(p)
+	}
+
+	// Log locally
+	log.Print(logMessage)
+
+	// Send Telegram message if not throttled
+	if throttleLog(logMessage) {
+		go sendTelegramMessage(logMessage)
+	}
+	return len(p), nil
+}
+
+// sendTelegramMessage sends a message via Telegram Bot API.
+func sendTelegramMessage(message string) {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", sharedGinConfig.TelegramBotToken)
+	body := fmt.Sprintf(`{"chat_id": "%s", "text": "%s"}`, sharedGinConfig.TelegramChatId, message)
+
+	// Send the request
+	resp, err := http.Post(url, "application/json", bytes.NewBufferString(body))
+	if err != nil {
+		log.Printf("Failed to send Telegram message: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("Telegram API error: %s", resp.Status)
+	}
+}
+
+// throttleLog ensures the same log message is only sent once every `messageThrottle`.
+func throttleLog(message string) bool {
+	logCacheMutex.Lock()
+	defer logCacheMutex.Unlock()
+
+	// Check if the message exists and is within the throttle time
+	if lastSent, exists := logCache[message]; exists && time.Since(lastSent) < sharedGinConfig.GetTelegramMessageThrottleMinute() {
+		return false
+	}
+
+	// Update the cache
+	logCache[message] = time.Now()
+	return true
+}
+
+func InitRouter(config GinConfig) *gin.Engine {
+	sharedGinConfig = config
+
+	// Ensure customLogger implements io.Writer
+	gin.DefaultWriter = customLogger{}
+	gin.DefaultErrorWriter = customLogger{}
+
+	// Use gin.New() if you want full control over the middlewares
+	router := gin.New()
+
+	router.Use(gin.Recovery())
+	router.Use(localization.Middleware())
+	router.Use(middleware.ErrorLoggingMiddleware())
+
+	return router
 }
 
 // GetSharedConfig exposes the stored configuration for other packages
