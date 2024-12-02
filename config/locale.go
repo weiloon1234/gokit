@@ -1,7 +1,5 @@
 package config
 
-import "github.com/weiloon1234/gokit/utils"
-
 type LocaleConfig struct {
 	DefaultLanguage    string
 	SupportedLanguages []string
@@ -17,7 +15,7 @@ func (c *LocaleConfig) BuildConfig() {
 	// Ensure SupportedLanguages includes the default language
 	if len(c.SupportedLanguages) == 0 {
 		c.SupportedLanguages = []string{"en"} // Default to English
-	} else if !utils.Contains(c.SupportedLanguages, c.DefaultLanguage) {
+	} else if contains(c.SupportedLanguages, c.DefaultLanguage) {
 		c.SupportedLanguages = append(c.SupportedLanguages, c.DefaultLanguage)
 	}
 
@@ -25,4 +23,14 @@ func (c *LocaleConfig) BuildConfig() {
 	if len(c.TranslationPaths) == 0 {
 		c.TranslationPaths = []string{"locales"}
 	}
+}
+
+// contains checks if a slice contains a specific string.
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
 }
