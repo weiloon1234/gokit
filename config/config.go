@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
-	"github.com/weiloon1234/gokit/utils"
 	"time"
 )
 
@@ -24,13 +23,13 @@ func (cfg *Config) BuildConfig() {
 	cfg.StorageConfig.BuildConfig()
 	cfg.UploadConfig.BuildConfig()
 	cfg.FeatureConfig.BuildConfig()
-	if utils.BoolValue(cfg.FeatureConfig.EnableDB) {
+	if cfg.FeatureConfig.EnableDB {
 		cfg.DBConfig.BuildConfig()
 	}
-	if utils.BoolValue(cfg.FeatureConfig.EnableRedis) {
+	if cfg.FeatureConfig.EnableRedis {
 		cfg.RedisConfig.BuildConfig()
 	}
-	if utils.BoolValue(cfg.FeatureConfig.EnableLocale) {
+	if cfg.FeatureConfig.EnableLocale {
 		cfg.LocalizationConfig.BuildConfig()
 	}
 }

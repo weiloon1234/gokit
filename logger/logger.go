@@ -61,7 +61,7 @@ func Init(config config.LogConfig) {
 		log.AddHook(&TelegramHook{
 			Token:    config.TelegramBotToken,
 			ChatID:   config.TelegramChatId,
-			Throttle: config.GetTelegramMessageThrottleMinute(),
+			Throttle: config.TelegramMessageThrottleMinute,
 		})
 	}
 }

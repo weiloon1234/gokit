@@ -8,7 +8,6 @@ import (
 	"github.com/weiloon1234/gokit/logger"
 	"github.com/weiloon1234/gokit/middleware"
 	"github.com/weiloon1234/gokit/storage"
-	"github.com/weiloon1234/gokit/utils"
 	"log"
 )
 
@@ -35,21 +34,21 @@ func Init(config config.Config) {
 	// Start App, some setting
 	config.BuildApp()
 
-	if utils.BoolValue(config.FeatureConfig.EnableDB) {
+	if config.FeatureConfig.EnableDB {
 		if err := database.Init(&config.DBConfig); err != nil {
 			log.Fatalf("Failed to initialize DB: %v", err)
 		}
 	}
 
 	// Initialize Redis
-	if utils.BoolValue(config.FeatureConfig.EnableRedis) {
+	if config.FeatureConfig.EnableRedis {
 		if err := database.InitRedis(&config.RedisConfig); err != nil {
 			log.Fatalf("Failed to initialize Redis: %v", err)
 		}
 	}
 
 	// Initialize Localization
-	if utils.BoolValue(config.FeatureConfig.EnableLocale) {
+	if config.FeatureConfig.EnableLocale {
 		localization.Init(&config.LocalizationConfig)
 	}
 
@@ -72,7 +71,7 @@ func InitRouter(config config.Config) *gin.Engine {
 
 	router := gin.New()
 	router.Use(gin.Recovery())
-	if utils.BoolValue(config.FeatureConfig.EnableLocale) {
+	if config.FeatureConfig.EnableLocale {
 		router.Use(localization.Middleware())
 	}
 	router.Use(middleware.RealIPMiddleware())

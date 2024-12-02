@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
-	log "github.com/sirupsen/logrus"
+	"github.com/weiloon1234/gokit/logger"
 )
 
 func ErrorLoggingMiddleware() gin.HandlerFunc {
@@ -12,7 +12,7 @@ func ErrorLoggingMiddleware() gin.HandlerFunc {
 		// Check for errors
 		if len(c.Errors) > 0 {
 			for _, e := range c.Errors {
-				log.Printf("Critical error: %v", e.Err)
+				logger.GetLogger().Printf("Critical error: %v", e.Err)
 			}
 		}
 	}
