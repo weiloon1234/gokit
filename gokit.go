@@ -15,6 +15,9 @@ import (
 // Logger instance
 var sharedConfig config.Config
 
+// Config Re-export
+type Config = config.Config
+
 func Init(config config.Config) {
 	config.BuildConfig()
 	sharedConfig = config
