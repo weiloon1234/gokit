@@ -22,14 +22,21 @@ var (
 	LocaleContextKey   string = "locale"
 )
 
-func Init(config *config.LocaleConfig) {
+func Init(cfg *config.LocaleConfig) {
+	if cfg == nil {
+		panic("Localization config cannot be nil")
+	}
+
+	// Assign to global variable
+	GlobalLocaleConfig = cfg
+
 	// Load predefined translations embedded in the gokit module
-	if err := loadEmbeddedTranslations(config.SupportedLanguages); err != nil {
+	if err := loadEmbeddedTranslations(cfg.SupportedLanguages); err != nil {
 		fmt.Printf("Warning: Failed to load embedded translations: %v\n", err)
 	}
 
 	// Load additional project-level translations from paths
-	for _, path := range config.TranslationPaths {
+	for _, path := range cfg.TranslationPaths {
 		if err := loadTranslationsFromPath(path); err != nil {
 			fmt.Printf("Warning: Failed to load additional translations from '%s': %v\n", path, err)
 		}
