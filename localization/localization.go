@@ -26,8 +26,12 @@ func Init(config LocaleConfig) {
 	defaultLanguage = config.DefaultLanguage
 	supportedLanguages = config.SupportedLanguages
 
-	// Load predefined translations from localization/locales directory
-	predefinedPath := "./localization/locales"
+	// Compute the absolute path of the predefined translations
+	predefinedPath, err := filepath.Abs("./localization/locales")
+	if err != nil {
+		fmt.Printf("Warning: Failed to resolve absolute path for predefined translations: %v\n", err)
+	}
+
 	if err := loadPredefinedTranslations(predefinedPath, supportedLanguages); err != nil {
 		fmt.Printf("Warning: Failed to load predefined translations: %v\n", err)
 	}
