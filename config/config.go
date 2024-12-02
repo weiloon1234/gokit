@@ -8,36 +8,36 @@ import (
 )
 
 type Config struct {
-	App                AppConfig
+	AppConfig          AppConfig
 	LogConfig          LogConfig
 	StorageConfig      StorageConfig
 	UploadConfig       UploadConfig
-	Features           Features
+	FeatureConfig      FeatureConfig
 	DBConfig           DBConfig
 	RedisConfig        RedisConfig
 	LocalizationConfig LocaleConfig
 }
 
 func (cfg *Config) BuildConfig() {
-	cfg.App.BuildConfig()
+	cfg.AppConfig.BuildConfig()
 	cfg.LogConfig.BuildConfig()
 	cfg.StorageConfig.BuildConfig()
 	cfg.UploadConfig.BuildConfig()
-	cfg.Features.BuildConfig()
-	if utils.BoolValue(cfg.Features.EnableDB) {
+	cfg.FeatureConfig.BuildConfig()
+	if utils.BoolValue(cfg.FeatureConfig.EnableDB) {
 		cfg.DBConfig.BuildConfig()
 	}
-	if utils.BoolValue(cfg.Features.EnableRedis) {
+	if utils.BoolValue(cfg.FeatureConfig.EnableRedis) {
 		cfg.RedisConfig.BuildConfig()
 	}
-	if utils.BoolValue(cfg.Features.EnableLocale) {
+	if utils.BoolValue(cfg.FeatureConfig.EnableLocale) {
 		cfg.LocalizationConfig.BuildConfig()
 	}
 }
 
 func (cfg *Config) BuildApp() {
 	// SetTimezone configures the application's timezone based on a string.
-	timezoneStr := cfg.App.Timezone.String()
+	timezoneStr := cfg.AppConfig.Timezone.String()
 	loc, err := time.LoadLocation(timezoneStr)
 	if err != nil {
 		panic(fmt.Sprintf("Invalid TIMEZONE value: %q, error: %v", timezoneStr, err))
