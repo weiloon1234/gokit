@@ -1,18 +1,27 @@
 package localization
 
 import (
+	"embed"
+	"encod
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"os"
 	"path/filepath"
-	"strings"
+	"embed"
 )
+
+ed predefined locale files
+//
+//
+// Embed predefined locale files
+//go:embed locales/*.json
+var embeddedLocales embed.FS
 
 type LocaleConfig struct {
 	DefaultLanguage    string
 	SupportedLanguages []string
-	TranslationPaths   []string // Paths to search for locale files
+	TranslationPaths   []string // Paths to search for project-level locale files
 }
 
 var (
@@ -26,17 +35,12 @@ func Init(config LocaleConfig) {
 	defaultLanguage = config.DefaultLanguage
 	supportedLanguages = config.SupportedLanguages
 
-	// Compute the absolute path of the predefined translations
-	predefinedPath, err := filepath.Abs("./localization/locales")
-	if err != nil {
-		fmt.Printf("Warning: Failed to resolve absolute path for predefined translations: %v\n", err)
+	// Load predefined translations embedded in the gokit module
+	if err := loadEmbeddedTranslations(supportedLanguages); err != nil {
+		fmt.Printf("Warning: Failed to load embedded translations: %v\n", err)
 	}
 
-	if err := loadPredefinedTranslations(predefinedPath, supportedLanguages); err != nil {
-		fmt.Printf("Warning: Failed to load predefined translations: %v\n", err)
-	}
-
-	// Load additional translations from custom paths
+	// Load additional project-level translations from paths
 	for _, path := range config.TranslationPaths {
 		if err := loadTranslationsFromPath(path); err != nil {
 			fmt.Printf("Warning: Failed to load additional translations from '%s': %v\n", path, err)
@@ -44,34 +48,25 @@ func Init(config LocaleConfig) {
 	}
 }
 
-// loadPredefinedTranslations loads predefined translations from a directory
-func loadPredefinedTranslations(path string, languages []string) error {
+// loadEmbeddedTranslations loads translations embedded in the gokit module
+func loadEmbeddedTranslations(languages []string) error {
 	for _, lang := range languages {
-		filePath := filepath.Join(path, fmt.Sprintf("%s.json", lang))
+		filePath := fmt.Sprintf("locales/%s.json", lang) // Path relative to embed
 
-		// Attempt to load the file
-		if _, err := os.Stat(filePath); os.IsNotExist(err) {
-			fmt.Printf("Warning: Locale file not found for '%s': %s\n", lang, filePath)
-			continue // Skip missing files
+		data, err := embeddedLocales.ReadFile(filePath)
+		if err != nil {
+			fmt.Printf("Warning: Embedded locale file not found for '%s': %s\n", lang, filePath)
+			continue
 		}
 
-		if err := loadTranslationsFromFile(filePath, lang); err != nil {
-			return fmt.Errorf("failed to load predefined translations for '%s': %v", lang, err)
-		}
-	}
-
-	// Ensure default language is loaded as fallback
-	defaultPath := filepath.Join(path, fmt.Sprintf("%s.json", defaultLanguage))
-	if _, exists := translations[defaultLanguage]; !exists {
-		if err := loadTranslationsFromFile(defaultPath, defaultLanguage); err != nil {
-			return fmt.Errorf("failed to load fallback default language file '%s': %v", defaultPath, err)
+		if err := mergeTranslations(data, lang); err != nil {
+			return fmt.Errorf("failed to load embedded translations for '%s': %v", lang, err)
 		}
 	}
-
 	return nil
 }
 
-// loadTranslationsFromPath searches for JSON files in a given path and merges them
+// loadTranslationsFromPath loads project-level translations from the provided path
 func loadTranslationsFromPath(path string) error {
 	return filepath.WalkDir(path, func(filePath string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -82,20 +77,21 @@ func loadTranslationsFromPath(path string) error {
 		}
 
 		locale := strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
-		return loadTranslationsFromFile(filePath, locale)
+
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to read localization file %s: %v", filePath, err)
+		}
+
+		return mergeTranslations(data, locale)
 	})
 }
 
-// loadTranslationsFromFile loads a single locale file and merges its translations
-func loadTranslationsFromFile(filePath, locale string) error {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to read localization file %s: %v", filePath, err)
-	}
-
+// mergeTranslations merges a JSON translation file into the translations map
+func mergeTranslations(data []byte, locale string) error {
 	var fileTranslations map[string]string
 	if err := json.Unmarshal(data, &fileTranslations); err != nil {
-		return fmt.Errorf("failed to parse localization file %s: %v", filePath, err)
+		return fmt.Errorf("failed to parse localization file for '%s': %v", locale, err)
 	}
 
 	if _, exists := translations[locale]; !exists {
@@ -104,7 +100,6 @@ func loadTranslationsFromFile(filePath, locale string) error {
 	for key, value := range fileTranslations {
 		translations[locale][key] = value
 	}
-
 	return nil
 }
 
@@ -121,25 +116,22 @@ func Middleware() gin.HandlerFunc {
 	}
 }
 
-// __ translates a key with optional attributes.
+// Translate translates a key with optional attributes.
 func Translate(c *gin.Context, key string, attributes ...map[string]string) string {
-	// Check if attributes are provided
 	var attr map[string]string
 	if len(attributes) > 0 {
 		attr = attributes[0] // Use the first attributes map if provided
 	}
 
-	// Detect the locale from the Gin context
 	locale, exists := c.Get(LocaleContextKey)
 	if !exists || locale == "" {
 		locale = defaultLanguage // Fallback to default language
 	}
 
-	// Perform the translation
 	return TranslateKey(locale.(string), key, attr)
 }
 
-// TranslateKey a given key into the specified locale
+// TranslateKey translates a key into the specified locale
 func TranslateKey(locale, key string, attributes map[string]string) string {
 	translation := translations[locale][key]
 	if translation == "" {
@@ -150,7 +142,6 @@ func TranslateKey(locale, key string, attributes map[string]string) string {
 		return key // Return the key itself if no translation is found
 	}
 
-	// Replace attributes in the translation
 	for attrKey, attrValue := range attributes {
 		translation = replaceAttribute(translation, attrKey, attrValue)
 	}
