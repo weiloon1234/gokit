@@ -4,16 +4,15 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"github.com/weiloon1234/gokit/database"
 	"github.com/weiloon1234/gokit/environment"
 	"github.com/weiloon1234/gokit/localization"
 	"github.com/weiloon1234/gokit/middleware"
 	"github.com/weiloon1234/gokit/storage"
 	"io"
-	"log"
 	"net/http"
 	"os"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -58,45 +57,28 @@ type GinConfig struct {
 }
 
 func (c GinConfig) GetTelegramMessageThrottleMinute() time.Duration {
-	// If not set, return the default value
 	if c.TelegramMessageThrottleMinute == 0 {
-		return 10 * time.Minute // Default throttle duration
+		return 10 * time.Minute
 	}
 	return c.TelegramMessageThrottleMinute
 }
 
-// Shared configuration accessible by other packages
-var sharedConfig Config
-var sharedGinConfig GinConfig
+// Logger instance
+var (
+	log             = logrus.New()
+	sharedConfig    Config
+	sharedGinConfig GinConfig
+	logCache        = make(map[string]time.Time)
+	logMutex        sync.Mutex
+)
 
-// NewDefaultFeatures returns Features with all flags set to true
-func NewDefaultFeatures() Features {
-	return Features{
-		EnableDB:     true,
-		EnableRedis:  true,
-		EnableLocale: true,
-	}
-}
-
-// mergeFeatures merges provided Features with default values
-func mergeFeatures(custom Features) Features {
-	defaults := NewDefaultFeatures()
-	if custom.EnableDB {
-		defaults.EnableDB = custom.EnableDB
-	}
-	if !custom.EnableRedis { // Default is true; keep it false if explicitly disabled
-		defaults.EnableRedis = custom.EnableRedis
-	}
-	if custom.EnableLocale {
-		defaults.EnableLocale = custom.EnableLocale
-	}
-	return defaults
-}
-
-// Init initializes all core components
 func Init(config Config) {
-	// Store the config for global access
 	sharedConfig = config
+
+	// Configure logger
+	setupLogger(config.Features)
+
+	log.Info("Initializing gokit...")
 
 	// Merge custom features with default values
 	config.Features = mergeFeatures(config.Features)
@@ -118,13 +100,13 @@ func Init(config Config) {
 		}
 	}
 
-	// Initialize Storage (pass relevant configuration)
+	// Initialize Storage
 	if config.StorageProvider != "" {
 		err := storage.Init(config.StorageProvider, config.StorageConfig, &config.UploadConfig)
 		if err != nil {
 			log.Fatalf("Failed to initialize storage: %v", err)
 		}
-		log.Println("Storage initialized successfully")
+		log.Info("Storage initialized successfully")
 	}
 
 	// Initialize Localization
@@ -132,69 +114,113 @@ func Init(config Config) {
 		localization.Init(config.LocalizationConfig)
 	}
 
-	log.Println("gokit initialized successfully")
+	log.Info("gokit initialized successfully")
 }
 
-var (
-	logCache      = make(map[string]time.Time)
-	logCacheMutex sync.Mutex
-)
+func setupLogger(features Features) {
+	// Set log level
+	log.SetLevel(logrus.InfoLevel)
 
-type customLogger struct{}
+	// Format logs
+	log.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
 
-func (cl customLogger) Write(p []byte) (n int, err error) {
-	// Extract file and line for throttling
-	_, file, line, ok := runtime.Caller(3)
-	logMessage := fmt.Sprintf("%s:%d - %s", file, line, string(p))
-	if !ok {
-		logMessage = string(p)
+	// Output logs to file and stdout
+	if sharedGinConfig.LogFile != "" {
+		logFile, err := os.OpenFile(sharedGinConfig.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+		if err != nil {
+			log.Fatalf("Failed to open log file: %v", err)
+		}
+		log.SetOutput(io.MultiWriter(logFile, os.Stdout))
+	} else {
+		log.SetOutput(os.Stdout)
 	}
 
-	// Log locally
-	log.Print(logMessage)
-
-	// Send Telegram message if not throttled
-	if throttleLog(logMessage) {
-		go sendTelegramMessage(logMessage)
+	// Add Telegram hook for fatal errors
+	if sharedGinConfig.FatalErrorInformTelegram {
+		log.AddHook(&TelegramHook{
+			Token:    sharedGinConfig.TelegramBotToken,
+			ChatID:   sharedGinConfig.TelegramChatId,
+			Throttle: sharedGinConfig.GetTelegramMessageThrottleMinute(),
+		})
 	}
-	return len(p), nil
 }
 
-// sendTelegramMessage sends a message via Telegram Bot API.
-func sendTelegramMessage(message string) {
-	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", sharedGinConfig.TelegramBotToken)
-	body := fmt.Sprintf(`{"chat_id": "%s", "text": "%s"}`, sharedGinConfig.TelegramChatId, message)
+func mergeFeatures(custom Features) Features {
+	defaults := NewDefaultFeatures()
+	if custom.EnableDB {
+		defaults.EnableDB = custom.EnableDB
+	}
+	if !custom.EnableRedis {
+		defaults.EnableRedis = custom.EnableRedis
+	}
+	if custom.EnableLocale {
+		defaults.EnableLocale = custom.EnableLocale
+	}
+	return defaults
+}
 
-	// Send the request
+func NewDefaultFeatures() Features {
+	return Features{
+		EnableDB:     true,
+		EnableRedis:  true,
+		EnableLocale: true,
+	}
+}
+
+type TelegramHook struct {
+	Token    string
+	ChatID   string
+	Throttle time.Duration
+}
+
+func (hook *TelegramHook) Levels() []logrus.Level {
+	return []logrus.Level{logrus.FatalLevel, logrus.PanicLevel}
+}
+
+func (hook *TelegramHook) Fire(entry *logrus.Entry) error {
+	message, err := entry.String()
+	if err != nil {
+		return fmt.Errorf("failed to stringify log entry: %v", err)
+	}
+
+	// Throttle messages
+	if !throttleLog(message, hook.Throttle) {
+		return nil
+	}
+
+	return sendTelegramMessage(hook.Token, hook.ChatID, message)
+}
+
+func sendTelegramMessage(token, chatID, message string) error {
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", token)
+	body := fmt.Sprintf(`{"chat_id": "%s", "text": "%s"}`, chatID, message)
+
 	resp, err := http.Post(url, "application/json", bytes.NewBufferString(body))
 	if err != nil {
-		log.Printf("Failed to send Telegram message: %v", err)
-		return
+		log.Errorf("Failed to send Telegram message: %v", err)
+		return err
 	}
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Printf("Failed to close Telegram message: %v", err)
-		}
-	}(resp.Body)
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Telegram API error: %s", resp.Status)
+		log.Errorf("Telegram API error: %s", resp.Status)
+		return fmt.Errorf("telegram API error: %s", resp.Status)
 	}
+
+	return nil
 }
 
-// throttleLog ensures the same log message is only sent once every `messageThrottle`.
-func throttleLog(message string) bool {
-	logCacheMutex.Lock()
-	defer logCacheMutex.Unlock()
+func throttleLog(message string, throttle time.Duration) bool {
+	logMutex.Lock()
+	defer logMutex.Unlock()
 
-	// Check if the message exists and is within the throttle time
-	if lastSent, exists := logCache[message]; exists && time.Since(lastSent) < sharedGinConfig.GetTelegramMessageThrottleMinute() {
+	if lastSent, exists := logCache[message]; exists && time.Since(lastSent) < throttle {
 		return false
 	}
 
-	// Update the cache
 	logCache[message] = time.Now()
 	return true
 }
@@ -202,22 +228,11 @@ func throttleLog(message string) bool {
 func InitRouter(config GinConfig) *gin.Engine {
 	sharedGinConfig = config
 
-	// Set up custom logging
-	if config.LogFile != "" {
-		file, err := os.OpenFile(config.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-		if err != nil {
-			log.Fatalf("Failed to open log file: %v", err)
-		}
-		gin.DefaultWriter = io.MultiWriter(file, os.Stdout)
-	}
+	// Use Logrus for Gin logs
+	gin.DefaultWriter = log.Writer()
+	gin.DefaultErrorWriter = log.Writer()
 
-	// Ensure customLogger implements io.Writer
-	gin.DefaultWriter = customLogger{}
-	gin.DefaultErrorWriter = customLogger{}
-
-	// Use gin.New() if you want full control over the middlewares
 	router := gin.New()
-
 	router.Use(gin.Recovery())
 	router.Use(localization.Middleware())
 	router.Use(middleware.ErrorLoggingMiddleware())
@@ -225,7 +240,6 @@ func InitRouter(config GinConfig) *gin.Engine {
 	return router
 }
 
-// GetSharedConfig exposes the stored configuration for other packages
 func GetSharedConfig() Config {
 	return sharedConfig
 }
