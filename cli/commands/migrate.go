@@ -4,8 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/mysql" // Replace with your DB driver
-	_ "github.com/golang-migrate/migrate/v4/source/file"    // For file source migrations
+	_ "github.com/golang-migrate/migrate/v4/database/mysql"    // Replace with your DB driver
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Replace with your DB driver
+	_ "github.com/golang-migrate/migrate/v4/source/file"       // For file source migrations
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/weiloon1234/gokit/database"
@@ -50,6 +51,16 @@ var MigrateCmd = &cobra.Command{
 	},
 }
 
+func getDSN() string {
+	cfg := database.GetGlobalDBConfig()
+	dsn := cfg.GetDSN()
+	if cfg.Driver == "postgres" {
+		return "postgres://" + dsn
+	} else {
+		return "mysql://" + dsn
+	}
+}
+
 func createMigration(name string) error {
 	cmd := exec.Command("migrate", "create", "-ext", "sql", "-dir", "database/migrations", "-seq", name)
 	output, err := cmd.CombinedOutput()
@@ -63,7 +74,7 @@ func createMigration(name string) error {
 }
 
 func runMigration(direction string) error {
-	m, err := migrate.New("file://database/migrations", database.GetGlobalDBConfig().GetDSN())
+	m, err := migrate.New("file://database/migrations", getDSN())
 	if err != nil {
 		return fmt.Errorf("migration setup failed: %v", err)
 	}
@@ -86,7 +97,7 @@ func runMigration(direction string) error {
 }
 
 func forceMigration(version int) error {
-	m, err := migrate.New("file://database/migrations", database.GetGlobalDBConfig().GetDSN())
+	m, err := migrate.New("file://database/migrations", getDSN())
 	if err != nil {
 		return fmt.Errorf("migration setup failed: %v", err)
 	}

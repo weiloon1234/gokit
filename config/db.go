@@ -3,6 +3,7 @@ package config
 import "fmt"
 
 type DBConfig struct {
+	Driver       string
 	Host         string
 	Port         string
 	Username     string
@@ -19,6 +20,10 @@ type DBConfig struct {
 }
 
 func (c *DBConfig) BuildConfig() {
+	if c.Driver == "" {
+		c.Driver = "mysql"
+	}
+
 	// Set charset default
 	if c.Charset == "" {
 		c.Charset = "utf8mb4"
