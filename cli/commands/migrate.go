@@ -8,7 +8,6 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"    // For file source migrations
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/weiloon1234/gokit"
 	"github.com/weiloon1234/gokit/database"
 	"os/exec"
 	"strconv"
@@ -20,12 +19,6 @@ var MigrateCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		action := args[0]
-		config := gokit.GetSharedConfig()
-
-		dsn := config.DBConfig.DSN
-		if dsn == "" {
-			return errors.New("DB_DSN not set in environment variables or .env file")
-		}
 
 		switch action {
 		case "create":
