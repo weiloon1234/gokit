@@ -12,15 +12,21 @@ import (
 	"log"
 )
 
-// Logger instance
-var sharedConfig config.Config
-
 // Config Re-export
 type Config = config.Config
 
+// Re-export sub-configs
+type AppConfig = config.AppConfig
+type DBConfig = config.DBConfig
+type FeatureConfig = config.Features
+type LocaleConfig = config.LocaleConfig
+type LogConfig = config.LogConfig
+type RedisConfig = config.RedisConfig
+type StorageConfig = config.StorageConfig
+type UploadConfig = config.UploadConfig
+
 func Init(config config.Config) {
 	config.BuildConfig()
-	sharedConfig = config
 
 	// Configure logger
 	logger.Init(config.LogConfig)
