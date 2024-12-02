@@ -12,7 +12,6 @@ import (
 
 // Embed predefined locale files
 //
-//go:embed locales/*.j
 //go:embed locales/*.json
 var embeddedLocales embed.FS
 
