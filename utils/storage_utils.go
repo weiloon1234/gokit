@@ -9,7 +9,7 @@ import (
 )
 
 // ValidateFile validates the file type and size
-func ValidateFile(c *gin.Context, fileHeader *multipart.FileHeader) error {
+func ValidateFile(c *gin.Context, fileHeader *multipart.FileHeader, file multipart.File) error {
 	cfg := storage.GetUploadConfig()
 
 	if fileHeader.Size > cfg.MaxFileSize {
@@ -29,7 +29,7 @@ func ValidateFile(c *gin.Context, fileHeader *multipart.FileHeader) error {
 }
 
 // ValidateImage validates that the file is an image
-func ValidateImage(c *gin.Context, fileHeader *multipart.FileHeader) error {
+func ValidateImage(c *gin.Context, fileHeader *multipart.FileHeader, file multipart.File) error {
 	cfg := storage.GetUploadConfig()
 
 	fileType := fileHeader.Header.Get("Content-Type")
@@ -39,24 +39,46 @@ func ValidateImage(c *gin.Context, fileHeader *multipart.FileHeader) error {
 		}))
 	}
 
-	return ValidateFile(c, fileHeader)
+	return ValidateFile(c, fileHeader, file)
 }
 
 // UploadFile validates and uploads a file
-func UploadFile(c *gin.Context, fileHeader *multipart.FileHeader, file multipart.File) (string, error) {
-	// Validate the file
-	if err := ValidateFile(c, fileHeader); err != nil {
+func UploadFile(c *gin.Context, fileHeader *multipart.FileHeader) (string, error) {
+	// Open the uploaded file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", err
+	}
+	defer func(file multipart.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+
+	if err := ValidateFile(c, fileHeader, file); err != nil {
 		return "", err
 	}
 
-	// Upload the file
 	return storage.GetManager().Upload(fileHeader.Filename, file, fileHeader.Header.Get("Content-Type"))
 }
 
 // UploadImage validates and uploads an image file
-func UploadImage(c *gin.Context, fileHeader *multipart.FileHeader, file multipart.File) (string, error) {
+func UploadImage(c *gin.Context, fileHeader *multipart.FileHeader) (string, error) {
+	// Open the uploaded file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", err
+	}
+	defer func(file multipart.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+
 	// Validate the file as an image
-	if err := ValidateImage(c, fileHeader); err != nil {
+	if err := ValidateImage(c, fileHeader, file); err != nil {
 		return "", err
 	}
 
