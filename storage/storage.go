@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"github.com/weiloon1234/gokit/config"
 	"io"
 	"mime/multipart"
 )
@@ -13,62 +14,29 @@ type Storage interface {
 	Delete(fileName string) error                                                      // Deletes the file
 }
 
-// UploadConfig holds validation settings for file uploads
-type UploadConfig struct {
-	AllowedFileTypes  []string // e.g., ["image/png", "image/jpeg", "application/pdf"]
-	AllowedImageTypes []string // e.g., ["image/png", "image/jpeg"]
-	MaxFileSize       int64    // Max file size in bytes
-}
-
-// DefaultUploadConfig provides default settings
-var DefaultUploadConfig = UploadConfig{
-	AllowedFileTypes:  []string{"image/png", "image/jpeg", "application/pdf"},
-	AllowedImageTypes: []string{"image/png", "image/jpeg"},
-	MaxFileSize:       5 * 1024 * 1024, // 5 MB
-}
-
 // manager holds the initialized storage instance
 var manager Storage
 
 // uploadConfig holds the global upload configuration
-var uploadConfig UploadConfig
+var uploadConfig *config.UploadConfig
 
 // Init initializes the storage provider and upload configuration globally
-func Init(provider string, storageConfig map[string]string, customUploadConfig *UploadConfig) error {
-	if provider == "" {
+func Init(storageCfg *config.StorageConfig, uploadCfg *config.UploadConfig) error {
+	if storageCfg.Provider == "" {
 		return fmt.Errorf("storage provider is not configured")
 	}
 
+	uploadConfig = uploadCfg
+
 	// Initialize the storage provider
-	storage, err := NewStorageProvider(provider, storageConfig)
+	storage, err := NewStorageProvider(storageCfg)
 	if err != nil {
 		return err
 	}
 
 	manager = storage
 
-	// Initialize upload configuration
-	InitUploadConfig(customUploadConfig)
-
 	return nil
-}
-
-// InitUploadConfig initializes the global upload configuration
-func InitUploadConfig(customConfig *UploadConfig) {
-	uploadConfig = DefaultUploadConfig // Start with default settings
-
-	// Merge custom configuration
-	if customConfig != nil {
-		if len(customConfig.AllowedFileTypes) > 0 {
-			uploadConfig.AllowedFileTypes = customConfig.AllowedFileTypes
-		}
-		if len(customConfig.AllowedImageTypes) > 0 {
-			uploadConfig.AllowedImageTypes = customConfig.AllowedImageTypes
-		}
-		if customConfig.MaxFileSize > 0 {
-			uploadConfig.MaxFileSize = customConfig.MaxFileSize
-		}
-	}
 }
 
 // GetManager retrieves the global storage instance
@@ -80,34 +48,34 @@ func GetManager() Storage {
 }
 
 // NewStorageProvider initializes the appropriate storage provider
-func NewStorageProvider(provider string, config map[string]string) (Storage, error) {
-	switch provider {
+func NewStorageProvider(storageCfg *config.StorageConfig) (Storage, error) {
+	switch storageCfg.Provider {
 	case "s3":
 		return NewS3Storage(
-			config["bucket"],
-			config["region"],
-			config["base_url"],
-			config["access_key"],
-			config["secret_key"],
+			storageCfg.Bucket,
+			storageCfg.Region,
+			storageCfg.BaseUrl,
+			storageCfg.AccessKey,
+			storageCfg.SecretKey,
 		), nil
 	default:
-		return nil, fmt.Errorf("unsupported storage provider: %s", provider)
+		return nil, fmt.Errorf("unsupported storage provider: %s", storageCfg.Provider)
 	}
 }
 
 // GetUploadConfig retrieves the global upload configuration
-func GetUploadConfig() UploadConfig {
+func GetUploadConfig() *config.UploadConfig {
 	return uploadConfig
 }
 
 // ValidateFile validates the file type and size
-func ValidateFile(fileHeader *multipart.FileHeader, config UploadConfig) error {
-	if fileHeader.Size > config.MaxFileSize {
-		return fmt.Errorf("file size exceeds the maximum limit of %d bytes", config.MaxFileSize)
+func ValidateFile(fileHeader *multipart.FileHeader) error {
+	if fileHeader.Size > uploadConfig.MaxFileSize {
+		return fmt.Errorf("file size exceeds the maximum limit of %d bytes", uploadConfig.MaxFileSize)
 	}
 
 	fileType := fileHeader.Header.Get("Content-Type")
-	if len(config.AllowedFileTypes) > 0 && !contains(config.AllowedFileTypes, fileType) {
+	if len(uploadConfig.AllowedFileTypes) > 0 && !contains(uploadConfig.AllowedFileTypes, fileType) {
 		return fmt.Errorf("file type '%s' is not allowed", fileType)
 	}
 
@@ -115,21 +83,18 @@ func ValidateFile(fileHeader *multipart.FileHeader, config UploadConfig) error {
 }
 
 // ValidateImage validates that the file is an image
-func ValidateImage(fileHeader *multipart.FileHeader, config UploadConfig) error {
+func ValidateImage(fileHeader *multipart.FileHeader) error {
 	fileType := fileHeader.Header.Get("Content-Type")
-	if len(config.AllowedImageTypes) > 0 && !contains(config.AllowedImageTypes, fileType) {
+	if len(uploadConfig.AllowedImageTypes) > 0 && !contains(uploadConfig.AllowedImageTypes, fileType) {
 		return fmt.Errorf("file type '%s' is not a valid image", fileType)
 	}
-	return ValidateFile(fileHeader, config)
+	return ValidateFile(fileHeader)
 }
 
 // UploadFile validates and uploads a file
 func UploadFile(fileHeader *multipart.FileHeader, file multipart.File) (string, error) {
-	// Get the shared configuration
-	config := GetUploadConfig()
-
 	// Validate the file
-	if err := ValidateFile(fileHeader, config); err != nil {
+	if err := ValidateFile(fileHeader); err != nil {
 		return "", err
 	}
 
@@ -139,11 +104,8 @@ func UploadFile(fileHeader *multipart.FileHeader, file multipart.File) (string, 
 
 // UploadImage validates and uploads an image file
 func UploadImage(fileHeader *multipart.FileHeader, file multipart.File) (string, error) {
-	// Get the shared configuration
-	config := GetUploadConfig()
-
 	// Validate the file as an image
-	if err := ValidateImage(fileHeader, config); err != nil {
+	if err := ValidateImage(fileHeader); err != nil {
 		return "", err
 	}
 

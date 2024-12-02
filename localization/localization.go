@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/weiloon1234/gokit/config"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,25 +16,15 @@ import (
 //go:embed locales/*.json
 var embeddedLocales embed.FS
 
-type LocaleConfig struct {
-	DefaultLanguage    string
-	SupportedLanguages []string
-	TranslationPaths   []string // Paths to search for project-level locale files
-}
-
+var translations = make(map[string]map[string]string) // locale -> key -> translation
 var (
+	GlobalLocaleConfig *config.LocaleConfig
 	LocaleContextKey   string = "locale"
-	defaultLanguage    string
-	supportedLanguages []string
-	translations       = make(map[string]map[string]string) // locale -> key -> translation
 )
 
-func Init(config LocaleConfig) {
-	defaultLanguage = config.DefaultLanguage
-	supportedLanguages = config.SupportedLanguages
-
+func Init(config *config.LocaleConfig) {
 	// Load predefined translations embedded in the gokit module
-	if err := loadEmbeddedTranslations(supportedLanguages); err != nil {
+	if err := loadEmbeddedTranslations(config.SupportedLanguages); err != nil {
 		fmt.Printf("Warning: Failed to load embedded translations: %v\n", err)
 	}
 
@@ -105,7 +96,7 @@ func Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		lang := c.GetHeader("Accept-Language")
 		if !isSupported(lang) {
-			lang = defaultLanguage
+			lang = GlobalLocaleConfig.DefaultLanguage
 		}
 		// Store the locale in the Gin context
 		c.Set(LocaleContextKey, lang)
@@ -122,7 +113,7 @@ func Translate(c *gin.Context, key string, attributes ...map[string]string) stri
 
 	locale, exists := c.Get(LocaleContextKey)
 	if !exists || locale == "" {
-		locale = defaultLanguage // Fallback to default language
+		locale = GlobalLocaleConfig.DefaultLanguage // Fallback to default language
 	}
 
 	return TranslateKey(locale.(string), key, attr)
@@ -132,7 +123,7 @@ func Translate(c *gin.Context, key string, attributes ...map[string]string) stri
 func TranslateKey(locale, key string, attributes map[string]string) string {
 	translation := translations[locale][key]
 	if translation == "" {
-		translation = translations[defaultLanguage][key] // Fallback to default language
+		translation = translations[GlobalLocaleConfig.DefaultLanguage][key] // Fallback to default language
 	}
 
 	if translation == "" {
@@ -149,7 +140,7 @@ func TranslateKey(locale, key string, attributes map[string]string) string {
 
 // isSupported checks if the language is supported
 func isSupported(lang string) bool {
-	for _, l := range supportedLanguages {
+	for _, l := range GlobalLocaleConfig.SupportedLanguages {
 		if strings.HasPrefix(lang, l) {
 			return true
 		}
