@@ -14,26 +14,46 @@ import (
 	"golang.org/x/image/tiff"
 )
 
-// decodeImage decodes an image from a multipart file header and returns the image along with its format.
-func decodeImage(fileHeader *multipart.FileHeader) (image.Image, string, error) {
+type ProcessingMethod string
+
+const (
+	MethodScale      ProcessingMethod = "Scale"
+	MethodScaleDown  ProcessingMethod = "ScaleDown"
+	MethodResize     ProcessingMethod = "Resize"
+	MethodResizeDown ProcessingMethod = "ResizeDown"
+	MethodCover      ProcessingMethod = "Cover"
+	MethodCoverDown  ProcessingMethod = "CoverDown"
+)
+
+type ImageProcessor struct {
+	Width    *int             // Target width (optional)
+	Height   *int             // Target height (optional)
+	Position imaging.Anchor   // Default for Cover and CoverDown
+	Method   ProcessingMethod // Specifies the processing method (Scale, ScaleDown, etc.)
+}
+
+// NewImageProcessor creates a new instance of ImageProcessor with default settings.
+func NewImageProcessor(width, height *int, position imaging.Anchor, method ProcessingMethod) *ImageProcessor {
+	return &ImageProcessor{
+		Width:    width,
+		Height:   height,
+		Position: position,
+		Method:   method,
+	}
+}
+
+// DecodeImage decodes an image from a multipart file header.
+func DecodeImage(fileHeader *multipart.FileHeader) (image.Image, string, error) {
 	file, err := fileHeader.Open()
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to open file: %v", err)
 	}
-	defer func(file multipart.File) {
-		err := file.Close()
-		if err != nil {
-
-		}
-	}(file)
+	defer file.Close()
 
 	src, format, err := image.Decode(file)
 	if err != nil {
 		if format == "" {
-			_, err := file.Seek(0, 0)
-			if err != nil {
-				return nil, "", err
-			} // Reset file pointer for WebP fallback
+			file.Seek(0, 0) // Reset file pointer for WebP fallback
 			webpImg, webpErr := webp.Decode(file)
 			if webpErr == nil {
 				return webpImg, "webp", nil
@@ -45,8 +65,8 @@ func decodeImage(fileHeader *multipart.FileHeader) (image.Image, string, error) 
 	return src, format, nil
 }
 
-// encodeImage encodes an image into a buffer using the detected format.
-func encodeImage(img image.Image, format string) (*bytes.Buffer, error) {
+// EncodeImage encodes an image into a buffer using the detected format.
+func EncodeImage(img image.Image, format string) (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 	switch format {
 	case "jpeg":
@@ -80,131 +100,133 @@ func encodeImage(img image.Image, format string) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-// Resize resizes the image to the specified dimensions without maintaining aspect ratio.
-func Resize(fileHeader *multipart.FileHeader, width, height *int) (*bytes.Buffer, error) {
-	src, format, err := decodeImage(fileHeader)
+// Resize resizes the image without maintaining aspect ratio.
+func (ipc *ImageProcessor) Resize(fileHeader *multipart.FileHeader) (*bytes.Buffer, error) {
+	src, format, err := DecodeImage(fileHeader)
 	if err != nil {
 		return nil, err
 	}
 
-	if width == nil && height == nil {
-		return nil, fmt.Errorf("at least one dimension (width or height) must be specified")
+	w, h := 0, 0
+	if ipc.Width != nil {
+		w = *ipc.Width
 	}
-
-	w := 0
-	if width != nil {
-		w = *width
-	}
-	h := 0
-	if height != nil {
-		h = *height
+	if ipc.Height != nil {
+		h = *ipc.Height
 	}
 
 	resized := imaging.Resize(src, w, h, imaging.Lanczos)
-	return encodeImage(resized, format)
+	return EncodeImage(resized, format)
 }
 
-// ResizeDown resizes the image only if the new dimensions are smaller than the original.
-func ResizeDown(fileHeader *multipart.FileHeader, width, height *int) (*bytes.Buffer, error) {
-	src, format, err := decodeImage(fileHeader)
+// ResizeDown resizes the image only if the new dimensions are smaller.
+func (ipc *ImageProcessor) ResizeDown(fileHeader *multipart.FileHeader) (*bytes.Buffer, error) {
+	src, format, err := DecodeImage(fileHeader)
 	if err != nil {
 		return nil, err
 	}
 
 	bounds := src.Bounds()
-	origWidth := bounds.Dx()
-	origHeight := bounds.Dy()
+	origWidth, origHeight := bounds.Dx(), bounds.Dy()
 
-	w := origWidth
-	h := origHeight
-
-	if width != nil && *width < origWidth {
-		w = *width
+	w, h := origWidth, origHeight
+	if ipc.Width != nil && *ipc.Width < origWidth {
+		w = *ipc.Width
 	}
-	if height != nil && *height < origHeight {
-		h = *height
+	if ipc.Height != nil && *ipc.Height < origHeight {
+		h = *ipc.Height
 	}
 
 	resized := imaging.Resize(src, w, h, imaging.Lanczos)
-	return encodeImage(resized, format)
+	return EncodeImage(resized, format)
 }
 
-// Scale scales the image to fit within the given dimensions, maintaining aspect ratio.
-func Scale(fileHeader *multipart.FileHeader, width, height *int) (*bytes.Buffer, error) {
-	src, format, err := decodeImage(fileHeader)
+// Scale scales the image while maintaining aspect ratio.
+func (ipc *ImageProcessor) Scale(fileHeader *multipart.FileHeader) (*bytes.Buffer, error) {
+	src, format, err := DecodeImage(fileHeader)
 	if err != nil {
 		return nil, err
 	}
 
-	if width == nil && height == nil {
-		return nil, fmt.Errorf("at least one dimension (width or height) must be specified")
+	w, h := 0, 0
+	if ipc.Width != nil {
+		w = *ipc.Width
 	}
-
-	w := 0
-	if width != nil {
-		w = *width
-	}
-	h := 0
-	if height != nil {
-		h = *height
+	if ipc.Height != nil {
+		h = *ipc.Height
 	}
 
 	scaled := imaging.Fit(src, w, h, imaging.Lanczos)
-	return encodeImage(scaled, format)
+	return EncodeImage(scaled, format)
 }
 
-// ScaleDown scales the image while maintaining aspect ratio and does not exceed the original size.
-func ScaleDown(fileHeader *multipart.FileHeader, width, height *int) (*bytes.Buffer, error) {
-	src, _, err := decodeImage(fileHeader)
+// ScaleDown scales the image while maintaining aspect ratio, not exceeding the original size.
+func (ipc *ImageProcessor) ScaleDown(fileHeader *multipart.FileHeader) (*bytes.Buffer, error) {
+	src, format, err := DecodeImage(fileHeader)
 	if err != nil {
 		return nil, err
 	}
 
 	bounds := src.Bounds()
-	origWidth := bounds.Dx()
-	origHeight := bounds.Dy()
+	origWidth, origHeight := bounds.Dx(), bounds.Dy()
 
-	if width != nil && *width > origWidth {
-		width = &origWidth
+	w, h := origWidth, origHeight
+	if ipc.Width != nil && *ipc.Width < origWidth {
+		w = *ipc.Width
 	}
-	if height != nil && *height > origHeight {
-		height = &origHeight
+	if ipc.Height != nil && *ipc.Height < origHeight {
+		h = *ipc.Height
 	}
 
-	return Scale(fileHeader, width, height)
+	scaled := imaging.Fit(src, w, h, imaging.Lanczos)
+	return EncodeImage(scaled, format)
 }
 
-// Cover crops the image to fill the specified dimensions, maintaining aspect ratio.
-func Cover(fileHeader *multipart.FileHeader, width, height int, position *imaging.Anchor) (*bytes.Buffer, error) {
-	src, format, err := decodeImage(fileHeader)
+// Cover crops the image to fit the specified dimensions.
+func (ipc *ImageProcessor) Cover(fileHeader *multipart.FileHeader) (*bytes.Buffer, error) {
+	src, format, err := DecodeImage(fileHeader)
 	if err != nil {
 		return nil, err
 	}
 
-	// Default to center position if not specified
-	pos := imaging.Center
-	if position != nil {
-		pos = *position
-	}
-
-	cropped := imaging.Fill(src, width, height, pos, imaging.Lanczos)
-	return encodeImage(cropped, format)
+	cropped := imaging.Fill(src, *ipc.Width, *ipc.Height, ipc.Position, imaging.Lanczos)
+	return EncodeImage(cropped, format)
 }
 
-// CoverDown scales down and crops the image to fill the dimensions without exceeding the original size.
-func CoverDown(fileHeader *multipart.FileHeader, width, height int, position *imaging.Anchor) (*bytes.Buffer, error) {
-	src, format, err := decodeImage(fileHeader)
+// CoverDown scales down and crops the image without exceeding original size.
+func (ipc *ImageProcessor) CoverDown(fileHeader *multipart.FileHeader) (*bytes.Buffer, error) {
+	src, format, err := DecodeImage(fileHeader)
 	if err != nil {
 		return nil, err
 	}
 
 	bounds := src.Bounds()
-	origWidth := bounds.Dx()
-	origHeight := bounds.Dy()
+	origWidth, origHeight := bounds.Dx(), bounds.Dy()
 
-	if width > origWidth || height > origHeight {
-		return encodeImage(src, format) // Return original if dimensions exceed original size
+	if *ipc.Width > origWidth || *ipc.Height > origHeight {
+		return EncodeImage(src, format) // Return original if dimensions exceed original size
 	}
 
-	return Cover(fileHeader, width, height, position)
+	cropped := imaging.Fill(src, *ipc.Width, *ipc.Height, ipc.Position, imaging.Lanczos)
+	return EncodeImage(cropped, format)
+}
+
+// Process determines the appropriate method to call based on the `Method` in the config.
+func (ipc *ImageProcessor) Process(fileHeader *multipart.FileHeader) (*bytes.Buffer, error) {
+	switch ipc.Method {
+	case MethodScale:
+		return ipc.Scale(fileHeader)
+	case MethodScaleDown:
+		return ipc.ScaleDown(fileHeader)
+	case MethodResize:
+		return ipc.Resize(fileHeader)
+	case MethodResizeDown:
+		return ipc.ResizeDown(fileHeader)
+	case MethodCover:
+		return ipc.Cover(fileHeader)
+	case MethodCoverDown:
+		return ipc.CoverDown(fileHeader)
+	default:
+		return nil, fmt.Errorf("unsupported processing method: %s", ipc.Method)
+	}
 }

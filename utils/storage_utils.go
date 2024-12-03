@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/weiloon1234/gokit/localization"
@@ -84,6 +85,35 @@ func UploadImage(c *gin.Context, fileHeader *multipart.FileHeader) (string, erro
 
 	// Upload the image
 	return storage.GetManager().Upload(fileHeader.Filename, file, fileHeader.Header.Get("Content-Type"))
+}
+
+// ResizeAndUploadImage validates and uploads an image file
+func ResizeAndUploadImage(c *gin.Context, fileHeader *multipart.FileHeader, processor *ImageProcessor) (string, error) {
+	// Open the uploaded file
+	file, err := fileHeader.Open()
+	if err != nil {
+		return "", err
+	}
+	defer func(file multipart.File) {
+		err := file.Close()
+		if err != nil {
+
+		}
+	}(file)
+
+	// Validate the file as an image
+	if err := ValidateImage(c, fileHeader, file); err != nil {
+		return "", err
+	}
+
+	// Process the image based on the method in the config
+	processedImage, err := processor.Process(fileHeader)
+	if err != nil {
+		return "", err
+	}
+
+	// Upload the processed image
+	return storage.GetManager().Upload(fileHeader.Filename, bytes.NewReader(processedImage.Bytes()), fileHeader.Header.Get("Content-Type"))
 }
 
 func GetFile(filePath string) string {
