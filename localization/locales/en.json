@@ -27,7 +27,9 @@
   "validation.is_percentage": "The :attribute is not a valid percentage",
   "validation.is_username": "Invalid username, username must be combination of alphanumeric and underscore only, 6-32 characters",
   "validation.max": "The :attribute must not exceed :max characters",
+  "validation.max_amount": "The :attribute must not exceed :max amount",
   "validation.min": "The :attribute must be at least :min characters",
+  "validation.min_amount": "The :attribute must be at least :min amount",
   "validation.required": "The :attribute field is required",
   "validation.unique": "The :attribute already exists",
   "validation.unknown": "The :attribute has an unknown rule: :rule"

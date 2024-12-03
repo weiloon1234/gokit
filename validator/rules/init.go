@@ -19,7 +19,9 @@ func init() {
 	validator.RegisterRule("is_percentage", IsPercentage)
 	validator.RegisterRule("is_username", IsUsername)
 	validator.RegisterRule("max", Max)
+	validator.RegisterRule("max_amount", MaxAmount)
 	validator.RegisterRule("min", Min)
+	validator.RegisterRule("min_amount", MinAmount)
 	validator.RegisterRule("required", Required)
 	validator.RegisterRule("unique", Unique)
 }
