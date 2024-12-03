@@ -12,7 +12,12 @@ type Validator struct {
 	errors map[string][]string
 }
 
-type RuleFunc func(value interface{}, param string, c *gin.Context) bool
+type Rule struct {
+	Name   string
+	Params []string
+}
+
+type RuleFunc func(value interface{}, params []string, c *gin.Context) bool
 
 var rules = make(map[string]RuleFunc)
 
@@ -28,7 +33,8 @@ func (v *Validator) ValidateAll(input map[string]interface{}, validationRules ma
 	for field, fieldRules := range validationRules {
 		value, exists := input[field]
 
-		for _, rule := range fieldRules {
+		for _, ruleString := range fieldRules {
+			rule := parseRule(ruleString)
 			if !exists || !v.applyRule(field, value, rule, c) {
 				break
 			}
@@ -46,29 +52,37 @@ func (v *Validator) Errors() map[string][]string {
 	return v.errors
 }
 
-// applyRule applies a single rule to a field
-func (v *Validator) applyRule(field string, value interface{}, rule string, c *gin.Context) bool {
-	ruleParts := strings.Split(rule, ":")
-	ruleName := ruleParts[0]
-	ruleParam := ""
-	if len(ruleParts) > 1 {
-		ruleParam = ruleParts[1]
+// parseRule parses a rule string into a Rule struct
+func parseRule(ruleString string) Rule {
+	parts := strings.Split(ruleString, ":")
+	ruleName := parts[0]
+	var ruleParams []string
+	if len(parts) > 1 {
+		ruleParams = strings.Split(parts[1], ",")
 	}
 
+	return Rule{
+		Name:   ruleName,
+		Params: ruleParams,
+	}
+}
+
+// applyRule applies a single rule to a field
+func (v *Validator) applyRule(field string, value interface{}, rule Rule, c *gin.Context) bool {
 	// Check if the rule exists
-	ruleFunc, exists := rules[ruleName]
+	ruleFunc, exists := rules[rule.Name]
 	if !exists {
 		// Add an error if the rule is unknown
-		v.addError(field, c, "validation.unknown", map[string]string{"rule": ruleName})
+		v.addError(field, c, "validation.unknown", map[string]string{"rule": rule.Name})
 		return false
 	}
 
 	// Apply the rule function
-	if !ruleFunc(value, ruleParam, c) {
+	if !ruleFunc(value, rule.Params, c) {
 		// Add an error if the rule fails
-		v.addError(field, c, fmt.Sprintf("validation.%s", ruleName), map[string]string{
+		v.addError(field, c, fmt.Sprintf("validation.%s", rule.Name), map[string]string{
 			"attribute": field,
-			"param":     ruleParam,
+			"params":    strings.Join(rule.Params, ", "),
 		})
 		return false
 	}

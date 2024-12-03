@@ -5,6 +5,6 @@ import (
 )
 
 // Required validates that the value is not empty or nil
-func Required(value interface{}, param string, c *gin.Context) bool {
+func Required(value interface{}, params []string, c *gin.Context) bool {
 	return value != nil && value != ""
 }
