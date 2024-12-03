@@ -12,7 +12,7 @@ func (u *UploadConfig) BuildConfig() {
 	}
 
 	if len(u.AllowedImageTypes) == 0 {
-		u.AllowedImageTypes = []string{"image/png", "image/jpeg"}
+		u.AllowedImageTypes = []string{"image/png", "image/jpeg", "image/jpg", "image/gif", "image/bmp", "image/tiff"}
 	}
 
 	//How to do this MaxFileSize
