@@ -50,6 +50,7 @@
   "File size exceeds the maximum limit of :size": "文件大小已超过允许的范围（:size）",
   "record not found": "记录不存在",
   "validation.alphanumeric": ":attribute 必须是字母与数字组合",
+  "validation.confirmed": ":attribute 不一致",
   "validation.email": ":attribute 必须是有效的电子邮件地址。",
   "validation.exists": ":attribute 并不存在",
   "validation.isContactNumber": ":attribute 并不是有效的联系号码",

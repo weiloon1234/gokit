@@ -13,6 +13,7 @@
   "File size exceeds the maximum limit of :size": "File size exceed the maximum limit of :size",
   "record not found": "Record not found",
   "validation.alphanumeric": "The :attribute must be alphanumeric",
+  "validation.confirmed": ":attribute does not match",
   "validation.email": "The :attribute must be a valid email address",
   "validation.exists": "The :attribute not found",
   "validation.isContactNumber": "The :attribute is not a valid contact number",
