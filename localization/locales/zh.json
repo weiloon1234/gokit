@@ -56,6 +56,8 @@
   "validation.datetime": ":attribute 并不是有效的日期与时间",
   "validation.email": ":attribute 必须是有效的电子邮件地址",
   "validation.exists": ":attribute 并不存在",
+  "validation.file": ":attribute 并不是有效的文件",
+  "validation.image": ":attribute 并不是有效的图片",
   "validation.is_contact_number": ":attribute 并不是有效的联系号码",
   "validation.is_money": ":attribute 并不是有效的金额",
   "validation.is_number": ":attribute 并不是有效的号码",

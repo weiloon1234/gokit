@@ -11,6 +11,8 @@ func init() {
 	validator.RegisterRule("datetime", DatetimeISO8601)
 	validator.RegisterRule("email", Email)
 	validator.RegisterRule("exists", Exists)
+	validator.RegisterRule("file", File)
+	validator.RegisterRule("image", Image)
 	validator.RegisterRule("is_contact_number", IsContactNumber)
 	validator.RegisterRule("is_money", IsMoney)
 	validator.RegisterRule("is_number", IsNumber)

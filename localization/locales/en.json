@@ -19,6 +19,8 @@
   "validation.datetime": "The :attribute is not a valid date time",
   "validation.email": "The :attribute must be a valid email address",
   "validation.exists": "The :attribute not found",
+  "validation.file": "The :attribute is not a valid file",
+  "validation.image": "The :attribute is not a valid image",
   "validation.is_contact_number": "The :attribute is not a valid contact number",
   "validation.is_money": ":attribute is not a valid amount",
   "validation.is_number": "The :attribute a valid number",
