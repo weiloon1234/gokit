@@ -26,7 +26,10 @@ jobs:
         run: |
           go mod tidy
           go mod download
+          go get golang.org/x/tools/go/ast/astutil@latest
+          go get golang.org/x/tools/go/packages@latest
+          go get golang.org/x/sync/errgroup@latest
+          go get golang.org/x/tools/imports@latest
 
       - name: Generate Ent code
-        run: |
-          go run ent/generate.go
+        run: go run ent/generate.go
