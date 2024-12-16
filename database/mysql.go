@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/dialect"
 
 	entSQL "entgo.io/ent/dialect/sql"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/ent"
@@ -29,7 +30,6 @@ func Init(config *config.DBConfig) error {
 	// Open database connection
 	var err error
 	sqlDB, err = sql.Open("mysql", config.GetDSN())
-	fmt.Printf(config.GetDSN())
 	if err != nil {
 		return fmt.Errorf("failed to open MySQL connection: %w", err)
 	}
