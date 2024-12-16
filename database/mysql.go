@@ -29,6 +29,7 @@ func Init(config *config.DBConfig) error {
 	// Open database connection
 	var err error
 	sqlDB, err = sql.Open("mysql", config.GetDSN())
+	fmt.Printf(config.GetDSN())
 	if err != nil {
 		return fmt.Errorf("failed to open MySQL connection: %w", err)
 	}
@@ -47,7 +48,7 @@ func Init(config *config.DBConfig) error {
 	dbClient = ent.NewClient(ent.Driver(entDriver))
 
 	// Run the schema migration with context timeout
-	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 30*time.Second)
+	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelMigration()
 	if err := dbClient.Schema.Create(
 		migrationCtx,
