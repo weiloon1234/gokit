@@ -1,6 +1,8 @@
 package gokit
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/database"
@@ -8,7 +10,6 @@ import (
 	"github.com/weiloon1234/gokit/logger"
 	"github.com/weiloon1234/gokit/middleware"
 	"github.com/weiloon1234/gokit/storage"
-	"log"
 )
 
 // Config Re-export
@@ -62,6 +63,13 @@ func Init(config config.Config) {
 	}
 
 	logger.GetLogger().Info("gokit initialized successfully")
+}
+
+// If there anything need to close on application exit, write here
+func Close() {
+	if err := database.CloseDB(); err != nil {
+		logger.GetLogger().Printf("Errors occurred during cleanup: %v\n", err)
+	}
 }
 
 func InitRouter(config config.Config) *gin.Engine {

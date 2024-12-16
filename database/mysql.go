@@ -4,13 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+
+	"time"
 
 	"entgo.io/ent/dialect"
+
 	entSQL "entgo.io/ent/dialect/sql"
+	"github.com/hashicorp/go-multierror"
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/ent"
 	"github.com/weiloon1234/gokit/ent/hook"
+	"github.com/weiloon1234/gokit/ent/migrate"
 )
 
 var (
@@ -22,8 +26,7 @@ var (
 // Init initializes the Ent client and connects to the database.
 func Init(config *config.DBConfig) error {
 	SetGlobalDBConfig(config)
-
-	// Open the database connection using the standard library
+	// Open database connection
 	var err error
 	sqlDB, err = sql.Open("mysql", config.GetDSN())
 	if err != nil {
@@ -31,7 +34,9 @@ func Init(config *config.DBConfig) error {
 	}
 
 	// Test the database connection
-	if err := sqlDB.Ping(); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := sqlDB.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to connect to MySQL: %w", err)
 	}
 
@@ -41,8 +46,14 @@ func Init(config *config.DBConfig) error {
 	// Initialize the Ent client
 	dbClient = ent.NewClient(ent.Driver(entDriver))
 
-	// Run the schema migration
-	if err := dbClient.Schema.Create(context.Background()); err != nil {
+	// Run the schema migration with context timeout
+	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelMigration()
+	if err := dbClient.Schema.Create(
+		migrationCtx,
+		migrate.WithDropColumn(true),
+		migrate.WithDropIndex(true),
+	); err != nil {
 		return fmt.Errorf("failed to create schema resources: %w", err)
 	}
 
@@ -72,22 +83,23 @@ func GetSQLDB() *sql.DB {
 }
 
 // CloseDB safely closes the database connection and the Ent client.
-func CloseDB() {
-	// Close the Ent client first
+func CloseDB() error {
+	var errs error
+
+	// Close Ent client
 	if dbClient != nil {
 		if err := dbClient.Close(); err != nil {
-			log.Printf("Error while closing Ent client: %v", err)
-		} else {
-			log.Println("Ent client closed.")
+			errs = multierror.Append(errs, fmt.Errorf("failed to close Ent client: %w", err))
 		}
 	}
 
-	// Close the raw database connection
+	// Close raw SQL connection
 	if sqlDB != nil {
 		if err := sqlDB.Close(); err != nil {
-			log.Printf("Error while closing database connection: %v", err)
-		} else {
-			log.Println("Database connection closed.")
+			errs = multierror.Append(errs, fmt.Errorf("failed to close SQL connection: %w", err))
 		}
 	}
+
+	// Return combined errors or nil if no errors occurred
+	return errs
 }
