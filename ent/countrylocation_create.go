@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
 )
 
@@ -124,6 +125,31 @@ func (clc *CountryLocationCreate) SetID(u uint64) *CountryLocationCreate {
 	return clc
 }
 
+// SetCountry sets the "country" edge to the Country entity.
+func (clc *CountryLocationCreate) SetCountry(c *Country) *CountryLocationCreate {
+	return clc.SetCountryID(c.ID)
+}
+
+// SetParent sets the "parent" edge to the CountryLocation entity.
+func (clc *CountryLocationCreate) SetParent(c *CountryLocation) *CountryLocationCreate {
+	return clc.SetParentID(c.ID)
+}
+
+// AddChildLocationIDs adds the "child_locations" edge to the CountryLocation entity by IDs.
+func (clc *CountryLocationCreate) AddChildLocationIDs(ids ...uint64) *CountryLocationCreate {
+	clc.mutation.AddChildLocationIDs(ids...)
+	return clc
+}
+
+// AddChildLocations adds the "child_locations" edges to the CountryLocation entity.
+func (clc *CountryLocationCreate) AddChildLocations(c ...*CountryLocation) *CountryLocationCreate {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return clc.AddChildLocationIDs(ids...)
+}
+
 // Mutation returns the CountryLocationMutation object of the builder.
 func (clc *CountryLocationCreate) Mutation() *CountryLocationMutation {
 	return clc.mutation
@@ -233,14 +259,6 @@ func (clc *CountryLocationCreate) createSpec() (*CountryLocation, *sqlgraph.Crea
 		_node.ID = id
 		_spec.ID.Value = id
 	}
-	if value, ok := clc.mutation.CountryID(); ok {
-		_spec.SetField(countrylocation.FieldCountryID, field.TypeUint64, value)
-		_node.CountryID = &value
-	}
-	if value, ok := clc.mutation.ParentID(); ok {
-		_spec.SetField(countrylocation.FieldParentID, field.TypeUint64, value)
-		_node.ParentID = &value
-	}
 	if value, ok := clc.mutation.Sorting(); ok {
 		_spec.SetField(countrylocation.FieldSorting, field.TypeUint64, value)
 		_node.Sorting = value
@@ -264,6 +282,56 @@ func (clc *CountryLocationCreate) createSpec() (*CountryLocation, *sqlgraph.Crea
 	if value, ok := clc.mutation.DeletedAt(); ok {
 		_spec.SetField(countrylocation.FieldDeletedAt, field.TypeTime, value)
 		_node.DeletedAt = &value
+	}
+	if nodes := clc.mutation.CountryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.CountryTable,
+			Columns: []string{countrylocation.CountryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(country.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.CountryID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := clc.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.ParentTable,
+			Columns: []string{countrylocation.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.ParentID = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := clc.mutation.ChildLocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   countrylocation.ChildLocationsTable,
+			Columns: []string{countrylocation.ChildLocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }
@@ -329,12 +397,6 @@ func (u *CountryLocationUpsert) UpdateCountryID() *CountryLocationUpsert {
 	return u
 }
 
-// AddCountryID adds v to the "country_id" field.
-func (u *CountryLocationUpsert) AddCountryID(v uint64) *CountryLocationUpsert {
-	u.Add(countrylocation.FieldCountryID, v)
-	return u
-}
-
 // ClearCountryID clears the value of the "country_id" field.
 func (u *CountryLocationUpsert) ClearCountryID() *CountryLocationUpsert {
 	u.SetNull(countrylocation.FieldCountryID)
@@ -350,12 +412,6 @@ func (u *CountryLocationUpsert) SetParentID(v uint64) *CountryLocationUpsert {
 // UpdateParentID sets the "parent_id" field to the value that was provided on create.
 func (u *CountryLocationUpsert) UpdateParentID() *CountryLocationUpsert {
 	u.SetExcluded(countrylocation.FieldParentID)
-	return u
-}
-
-// AddParentID adds v to the "parent_id" field.
-func (u *CountryLocationUpsert) AddParentID(v uint64) *CountryLocationUpsert {
-	u.Add(countrylocation.FieldParentID, v)
 	return u
 }
 
@@ -504,13 +560,6 @@ func (u *CountryLocationUpsertOne) SetCountryID(v uint64) *CountryLocationUpsert
 	})
 }
 
-// AddCountryID adds v to the "country_id" field.
-func (u *CountryLocationUpsertOne) AddCountryID(v uint64) *CountryLocationUpsertOne {
-	return u.Update(func(s *CountryLocationUpsert) {
-		s.AddCountryID(v)
-	})
-}
-
 // UpdateCountryID sets the "country_id" field to the value that was provided on create.
 func (u *CountryLocationUpsertOne) UpdateCountryID() *CountryLocationUpsertOne {
 	return u.Update(func(s *CountryLocationUpsert) {
@@ -529,13 +578,6 @@ func (u *CountryLocationUpsertOne) ClearCountryID() *CountryLocationUpsertOne {
 func (u *CountryLocationUpsertOne) SetParentID(v uint64) *CountryLocationUpsertOne {
 	return u.Update(func(s *CountryLocationUpsert) {
 		s.SetParentID(v)
-	})
-}
-
-// AddParentID adds v to the "parent_id" field.
-func (u *CountryLocationUpsertOne) AddParentID(v uint64) *CountryLocationUpsertOne {
-	return u.Update(func(s *CountryLocationUpsert) {
-		s.AddParentID(v)
 	})
 }
 
@@ -872,13 +914,6 @@ func (u *CountryLocationUpsertBulk) SetCountryID(v uint64) *CountryLocationUpser
 	})
 }
 
-// AddCountryID adds v to the "country_id" field.
-func (u *CountryLocationUpsertBulk) AddCountryID(v uint64) *CountryLocationUpsertBulk {
-	return u.Update(func(s *CountryLocationUpsert) {
-		s.AddCountryID(v)
-	})
-}
-
 // UpdateCountryID sets the "country_id" field to the value that was provided on create.
 func (u *CountryLocationUpsertBulk) UpdateCountryID() *CountryLocationUpsertBulk {
 	return u.Update(func(s *CountryLocationUpsert) {
@@ -897,13 +932,6 @@ func (u *CountryLocationUpsertBulk) ClearCountryID() *CountryLocationUpsertBulk 
 func (u *CountryLocationUpsertBulk) SetParentID(v uint64) *CountryLocationUpsertBulk {
 	return u.Update(func(s *CountryLocationUpsert) {
 		s.SetParentID(v)
-	})
-}
-
-// AddParentID adds v to the "parent_id" field.
-func (u *CountryLocationUpsertBulk) AddParentID(v uint64) *CountryLocationUpsertBulk {
-	return u.Update(func(s *CountryLocationUpsert) {
-		s.AddParentID(v)
 	})
 }
 

@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -11,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
 	"github.com/weiloon1234/gokit/ent/predicate"
 )
@@ -18,10 +20,13 @@ import (
 // CountryLocationQuery is the builder for querying CountryLocation entities.
 type CountryLocationQuery struct {
 	config
-	ctx        *QueryContext
-	order      []countrylocation.OrderOption
-	inters     []Interceptor
-	predicates []predicate.CountryLocation
+	ctx                *QueryContext
+	order              []countrylocation.OrderOption
+	inters             []Interceptor
+	predicates         []predicate.CountryLocation
+	withCountry        *CountryQuery
+	withParent         *CountryLocationQuery
+	withChildLocations *CountryLocationQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +61,72 @@ func (clq *CountryLocationQuery) Unique(unique bool) *CountryLocationQuery {
 func (clq *CountryLocationQuery) Order(o ...countrylocation.OrderOption) *CountryLocationQuery {
 	clq.order = append(clq.order, o...)
 	return clq
+}
+
+// QueryCountry chains the current query on the "country" edge.
+func (clq *CountryLocationQuery) QueryCountry() *CountryQuery {
+	query := (&CountryClient{config: clq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := clq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := clq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(countrylocation.Table, countrylocation.FieldID, selector),
+			sqlgraph.To(country.Table, country.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, countrylocation.CountryTable, countrylocation.CountryColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(clq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryParent chains the current query on the "parent" edge.
+func (clq *CountryLocationQuery) QueryParent() *CountryLocationQuery {
+	query := (&CountryLocationClient{config: clq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := clq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := clq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(countrylocation.Table, countrylocation.FieldID, selector),
+			sqlgraph.To(countrylocation.Table, countrylocation.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, countrylocation.ParentTable, countrylocation.ParentColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(clq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryChildLocations chains the current query on the "child_locations" edge.
+func (clq *CountryLocationQuery) QueryChildLocations() *CountryLocationQuery {
+	query := (&CountryLocationClient{config: clq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := clq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := clq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(countrylocation.Table, countrylocation.FieldID, selector),
+			sqlgraph.To(countrylocation.Table, countrylocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, countrylocation.ChildLocationsTable, countrylocation.ChildLocationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(clq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first CountryLocation entity from the query.
@@ -245,15 +316,51 @@ func (clq *CountryLocationQuery) Clone() *CountryLocationQuery {
 		return nil
 	}
 	return &CountryLocationQuery{
-		config:     clq.config,
-		ctx:        clq.ctx.Clone(),
-		order:      append([]countrylocation.OrderOption{}, clq.order...),
-		inters:     append([]Interceptor{}, clq.inters...),
-		predicates: append([]predicate.CountryLocation{}, clq.predicates...),
+		config:             clq.config,
+		ctx:                clq.ctx.Clone(),
+		order:              append([]countrylocation.OrderOption{}, clq.order...),
+		inters:             append([]Interceptor{}, clq.inters...),
+		predicates:         append([]predicate.CountryLocation{}, clq.predicates...),
+		withCountry:        clq.withCountry.Clone(),
+		withParent:         clq.withParent.Clone(),
+		withChildLocations: clq.withChildLocations.Clone(),
 		// clone intermediate query.
 		sql:  clq.sql.Clone(),
 		path: clq.path,
 	}
+}
+
+// WithCountry tells the query-builder to eager-load the nodes that are connected to
+// the "country" edge. The optional arguments are used to configure the query builder of the edge.
+func (clq *CountryLocationQuery) WithCountry(opts ...func(*CountryQuery)) *CountryLocationQuery {
+	query := (&CountryClient{config: clq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	clq.withCountry = query
+	return clq
+}
+
+// WithParent tells the query-builder to eager-load the nodes that are connected to
+// the "parent" edge. The optional arguments are used to configure the query builder of the edge.
+func (clq *CountryLocationQuery) WithParent(opts ...func(*CountryLocationQuery)) *CountryLocationQuery {
+	query := (&CountryLocationClient{config: clq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	clq.withParent = query
+	return clq
+}
+
+// WithChildLocations tells the query-builder to eager-load the nodes that are connected to
+// the "child_locations" edge. The optional arguments are used to configure the query builder of the edge.
+func (clq *CountryLocationQuery) WithChildLocations(opts ...func(*CountryLocationQuery)) *CountryLocationQuery {
+	query := (&CountryLocationClient{config: clq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	clq.withChildLocations = query
+	return clq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,8 +439,13 @@ func (clq *CountryLocationQuery) prepareQuery(ctx context.Context) error {
 
 func (clq *CountryLocationQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*CountryLocation, error) {
 	var (
-		nodes = []*CountryLocation{}
-		_spec = clq.querySpec()
+		nodes       = []*CountryLocation{}
+		_spec       = clq.querySpec()
+		loadedTypes = [3]bool{
+			clq.withCountry != nil,
+			clq.withParent != nil,
+			clq.withChildLocations != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*CountryLocation).scanValues(nil, columns)
@@ -341,6 +453,7 @@ func (clq *CountryLocationQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &CountryLocation{config: clq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +465,126 @@ func (clq *CountryLocationQuery) sqlAll(ctx context.Context, hooks ...queryHook)
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := clq.withCountry; query != nil {
+		if err := clq.loadCountry(ctx, query, nodes, nil,
+			func(n *CountryLocation, e *Country) { n.Edges.Country = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := clq.withParent; query != nil {
+		if err := clq.loadParent(ctx, query, nodes, nil,
+			func(n *CountryLocation, e *CountryLocation) { n.Edges.Parent = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := clq.withChildLocations; query != nil {
+		if err := clq.loadChildLocations(ctx, query, nodes,
+			func(n *CountryLocation) { n.Edges.ChildLocations = []*CountryLocation{} },
+			func(n *CountryLocation, e *CountryLocation) {
+				n.Edges.ChildLocations = append(n.Edges.ChildLocations, e)
+			}); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (clq *CountryLocationQuery) loadCountry(ctx context.Context, query *CountryQuery, nodes []*CountryLocation, init func(*CountryLocation), assign func(*CountryLocation, *Country)) error {
+	ids := make([]uint64, 0, len(nodes))
+	nodeids := make(map[uint64][]*CountryLocation)
+	for i := range nodes {
+		if nodes[i].CountryID == nil {
+			continue
+		}
+		fk := *nodes[i].CountryID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(country.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "country_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (clq *CountryLocationQuery) loadParent(ctx context.Context, query *CountryLocationQuery, nodes []*CountryLocation, init func(*CountryLocation), assign func(*CountryLocation, *CountryLocation)) error {
+	ids := make([]uint64, 0, len(nodes))
+	nodeids := make(map[uint64][]*CountryLocation)
+	for i := range nodes {
+		if nodes[i].ParentID == nil {
+			continue
+		}
+		fk := *nodes[i].ParentID
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(countrylocation.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "parent_id" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (clq *CountryLocationQuery) loadChildLocations(ctx context.Context, query *CountryLocationQuery, nodes []*CountryLocation, init func(*CountryLocation), assign func(*CountryLocation, *CountryLocation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint64]*CountryLocation)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(countrylocation.FieldParentID)
+	}
+	query.Where(predicate.CountryLocation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(countrylocation.ChildLocationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ParentID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "parent_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "parent_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (clq *CountryLocationQuery) sqlCount(ctx context.Context) (int, error) {
@@ -379,6 +611,12 @@ func (clq *CountryLocationQuery) querySpec() *sqlgraph.QuerySpec {
 			if fields[i] != countrylocation.FieldID {
 				_spec.Node.Columns = append(_spec.Node.Columns, fields[i])
 			}
+		}
+		if clq.withCountry != nil {
+			_spec.Node.AddColumnOnce(countrylocation.FieldCountryID)
+		}
+		if clq.withParent != nil {
+			_spec.Node.AddColumnOnce(countrylocation.FieldParentID)
 		}
 	}
 	if ps := clq.predicates; len(ps) > 0 {

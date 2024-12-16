@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
 	"github.com/weiloon1234/gokit/ent/predicate"
 )
@@ -30,7 +31,6 @@ func (clu *CountryLocationUpdate) Where(ps ...predicate.CountryLocation) *Countr
 
 // SetCountryID sets the "country_id" field.
 func (clu *CountryLocationUpdate) SetCountryID(u uint64) *CountryLocationUpdate {
-	clu.mutation.ResetCountryID()
 	clu.mutation.SetCountryID(u)
 	return clu
 }
@@ -43,12 +43,6 @@ func (clu *CountryLocationUpdate) SetNillableCountryID(u *uint64) *CountryLocati
 	return clu
 }
 
-// AddCountryID adds u to the "country_id" field.
-func (clu *CountryLocationUpdate) AddCountryID(u int64) *CountryLocationUpdate {
-	clu.mutation.AddCountryID(u)
-	return clu
-}
-
 // ClearCountryID clears the value of the "country_id" field.
 func (clu *CountryLocationUpdate) ClearCountryID() *CountryLocationUpdate {
 	clu.mutation.ClearCountryID()
@@ -57,7 +51,6 @@ func (clu *CountryLocationUpdate) ClearCountryID() *CountryLocationUpdate {
 
 // SetParentID sets the "parent_id" field.
 func (clu *CountryLocationUpdate) SetParentID(u uint64) *CountryLocationUpdate {
-	clu.mutation.ResetParentID()
 	clu.mutation.SetParentID(u)
 	return clu
 }
@@ -67,12 +60,6 @@ func (clu *CountryLocationUpdate) SetNillableParentID(u *uint64) *CountryLocatio
 	if u != nil {
 		clu.SetParentID(*u)
 	}
-	return clu
-}
-
-// AddParentID adds u to the "parent_id" field.
-func (clu *CountryLocationUpdate) AddParentID(u int64) *CountryLocationUpdate {
-	clu.mutation.AddParentID(u)
 	return clu
 }
 
@@ -171,9 +158,67 @@ func (clu *CountryLocationUpdate) ClearDeletedAt() *CountryLocationUpdate {
 	return clu
 }
 
+// SetCountry sets the "country" edge to the Country entity.
+func (clu *CountryLocationUpdate) SetCountry(c *Country) *CountryLocationUpdate {
+	return clu.SetCountryID(c.ID)
+}
+
+// SetParent sets the "parent" edge to the CountryLocation entity.
+func (clu *CountryLocationUpdate) SetParent(c *CountryLocation) *CountryLocationUpdate {
+	return clu.SetParentID(c.ID)
+}
+
+// AddChildLocationIDs adds the "child_locations" edge to the CountryLocation entity by IDs.
+func (clu *CountryLocationUpdate) AddChildLocationIDs(ids ...uint64) *CountryLocationUpdate {
+	clu.mutation.AddChildLocationIDs(ids...)
+	return clu
+}
+
+// AddChildLocations adds the "child_locations" edges to the CountryLocation entity.
+func (clu *CountryLocationUpdate) AddChildLocations(c ...*CountryLocation) *CountryLocationUpdate {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return clu.AddChildLocationIDs(ids...)
+}
+
 // Mutation returns the CountryLocationMutation object of the builder.
 func (clu *CountryLocationUpdate) Mutation() *CountryLocationMutation {
 	return clu.mutation
+}
+
+// ClearCountry clears the "country" edge to the Country entity.
+func (clu *CountryLocationUpdate) ClearCountry() *CountryLocationUpdate {
+	clu.mutation.ClearCountry()
+	return clu
+}
+
+// ClearParent clears the "parent" edge to the CountryLocation entity.
+func (clu *CountryLocationUpdate) ClearParent() *CountryLocationUpdate {
+	clu.mutation.ClearParent()
+	return clu
+}
+
+// ClearChildLocations clears all "child_locations" edges to the CountryLocation entity.
+func (clu *CountryLocationUpdate) ClearChildLocations() *CountryLocationUpdate {
+	clu.mutation.ClearChildLocations()
+	return clu
+}
+
+// RemoveChildLocationIDs removes the "child_locations" edge to CountryLocation entities by IDs.
+func (clu *CountryLocationUpdate) RemoveChildLocationIDs(ids ...uint64) *CountryLocationUpdate {
+	clu.mutation.RemoveChildLocationIDs(ids...)
+	return clu
+}
+
+// RemoveChildLocations removes "child_locations" edges to CountryLocation entities.
+func (clu *CountryLocationUpdate) RemoveChildLocations(c ...*CountryLocation) *CountryLocationUpdate {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return clu.RemoveChildLocationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -239,24 +284,6 @@ func (clu *CountryLocationUpdate) sqlSave(ctx context.Context) (n int, err error
 			}
 		}
 	}
-	if value, ok := clu.mutation.CountryID(); ok {
-		_spec.SetField(countrylocation.FieldCountryID, field.TypeUint64, value)
-	}
-	if value, ok := clu.mutation.AddedCountryID(); ok {
-		_spec.AddField(countrylocation.FieldCountryID, field.TypeUint64, value)
-	}
-	if clu.mutation.CountryIDCleared() {
-		_spec.ClearField(countrylocation.FieldCountryID, field.TypeUint64)
-	}
-	if value, ok := clu.mutation.ParentID(); ok {
-		_spec.SetField(countrylocation.FieldParentID, field.TypeUint64, value)
-	}
-	if value, ok := clu.mutation.AddedParentID(); ok {
-		_spec.AddField(countrylocation.FieldParentID, field.TypeUint64, value)
-	}
-	if clu.mutation.ParentIDCleared() {
-		_spec.ClearField(countrylocation.FieldParentID, field.TypeUint64)
-	}
 	if value, ok := clu.mutation.Sorting(); ok {
 		_spec.SetField(countrylocation.FieldSorting, field.TypeUint64, value)
 	}
@@ -281,6 +308,109 @@ func (clu *CountryLocationUpdate) sqlSave(ctx context.Context) (n int, err error
 	if clu.mutation.DeletedAtCleared() {
 		_spec.ClearField(countrylocation.FieldDeletedAt, field.TypeTime)
 	}
+	if clu.mutation.CountryCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.CountryTable,
+			Columns: []string{countrylocation.CountryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(country.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := clu.mutation.CountryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.CountryTable,
+			Columns: []string{countrylocation.CountryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(country.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if clu.mutation.ParentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.ParentTable,
+			Columns: []string{countrylocation.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := clu.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.ParentTable,
+			Columns: []string{countrylocation.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if clu.mutation.ChildLocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   countrylocation.ChildLocationsTable,
+			Columns: []string{countrylocation.ChildLocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := clu.mutation.RemovedChildLocationsIDs(); len(nodes) > 0 && !clu.mutation.ChildLocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   countrylocation.ChildLocationsTable,
+			Columns: []string{countrylocation.ChildLocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := clu.mutation.ChildLocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   countrylocation.ChildLocationsTable,
+			Columns: []string{countrylocation.ChildLocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, clu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{countrylocation.Label}
@@ -303,7 +433,6 @@ type CountryLocationUpdateOne struct {
 
 // SetCountryID sets the "country_id" field.
 func (cluo *CountryLocationUpdateOne) SetCountryID(u uint64) *CountryLocationUpdateOne {
-	cluo.mutation.ResetCountryID()
 	cluo.mutation.SetCountryID(u)
 	return cluo
 }
@@ -316,12 +445,6 @@ func (cluo *CountryLocationUpdateOne) SetNillableCountryID(u *uint64) *CountryLo
 	return cluo
 }
 
-// AddCountryID adds u to the "country_id" field.
-func (cluo *CountryLocationUpdateOne) AddCountryID(u int64) *CountryLocationUpdateOne {
-	cluo.mutation.AddCountryID(u)
-	return cluo
-}
-
 // ClearCountryID clears the value of the "country_id" field.
 func (cluo *CountryLocationUpdateOne) ClearCountryID() *CountryLocationUpdateOne {
 	cluo.mutation.ClearCountryID()
@@ -330,7 +453,6 @@ func (cluo *CountryLocationUpdateOne) ClearCountryID() *CountryLocationUpdateOne
 
 // SetParentID sets the "parent_id" field.
 func (cluo *CountryLocationUpdateOne) SetParentID(u uint64) *CountryLocationUpdateOne {
-	cluo.mutation.ResetParentID()
 	cluo.mutation.SetParentID(u)
 	return cluo
 }
@@ -340,12 +462,6 @@ func (cluo *CountryLocationUpdateOne) SetNillableParentID(u *uint64) *CountryLoc
 	if u != nil {
 		cluo.SetParentID(*u)
 	}
-	return cluo
-}
-
-// AddParentID adds u to the "parent_id" field.
-func (cluo *CountryLocationUpdateOne) AddParentID(u int64) *CountryLocationUpdateOne {
-	cluo.mutation.AddParentID(u)
 	return cluo
 }
 
@@ -444,9 +560,67 @@ func (cluo *CountryLocationUpdateOne) ClearDeletedAt() *CountryLocationUpdateOne
 	return cluo
 }
 
+// SetCountry sets the "country" edge to the Country entity.
+func (cluo *CountryLocationUpdateOne) SetCountry(c *Country) *CountryLocationUpdateOne {
+	return cluo.SetCountryID(c.ID)
+}
+
+// SetParent sets the "parent" edge to the CountryLocation entity.
+func (cluo *CountryLocationUpdateOne) SetParent(c *CountryLocation) *CountryLocationUpdateOne {
+	return cluo.SetParentID(c.ID)
+}
+
+// AddChildLocationIDs adds the "child_locations" edge to the CountryLocation entity by IDs.
+func (cluo *CountryLocationUpdateOne) AddChildLocationIDs(ids ...uint64) *CountryLocationUpdateOne {
+	cluo.mutation.AddChildLocationIDs(ids...)
+	return cluo
+}
+
+// AddChildLocations adds the "child_locations" edges to the CountryLocation entity.
+func (cluo *CountryLocationUpdateOne) AddChildLocations(c ...*CountryLocation) *CountryLocationUpdateOne {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return cluo.AddChildLocationIDs(ids...)
+}
+
 // Mutation returns the CountryLocationMutation object of the builder.
 func (cluo *CountryLocationUpdateOne) Mutation() *CountryLocationMutation {
 	return cluo.mutation
+}
+
+// ClearCountry clears the "country" edge to the Country entity.
+func (cluo *CountryLocationUpdateOne) ClearCountry() *CountryLocationUpdateOne {
+	cluo.mutation.ClearCountry()
+	return cluo
+}
+
+// ClearParent clears the "parent" edge to the CountryLocation entity.
+func (cluo *CountryLocationUpdateOne) ClearParent() *CountryLocationUpdateOne {
+	cluo.mutation.ClearParent()
+	return cluo
+}
+
+// ClearChildLocations clears all "child_locations" edges to the CountryLocation entity.
+func (cluo *CountryLocationUpdateOne) ClearChildLocations() *CountryLocationUpdateOne {
+	cluo.mutation.ClearChildLocations()
+	return cluo
+}
+
+// RemoveChildLocationIDs removes the "child_locations" edge to CountryLocation entities by IDs.
+func (cluo *CountryLocationUpdateOne) RemoveChildLocationIDs(ids ...uint64) *CountryLocationUpdateOne {
+	cluo.mutation.RemoveChildLocationIDs(ids...)
+	return cluo
+}
+
+// RemoveChildLocations removes "child_locations" edges to CountryLocation entities.
+func (cluo *CountryLocationUpdateOne) RemoveChildLocations(c ...*CountryLocation) *CountryLocationUpdateOne {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return cluo.RemoveChildLocationIDs(ids...)
 }
 
 // Where appends a list predicates to the CountryLocationUpdate builder.
@@ -542,24 +716,6 @@ func (cluo *CountryLocationUpdateOne) sqlSave(ctx context.Context) (_node *Count
 			}
 		}
 	}
-	if value, ok := cluo.mutation.CountryID(); ok {
-		_spec.SetField(countrylocation.FieldCountryID, field.TypeUint64, value)
-	}
-	if value, ok := cluo.mutation.AddedCountryID(); ok {
-		_spec.AddField(countrylocation.FieldCountryID, field.TypeUint64, value)
-	}
-	if cluo.mutation.CountryIDCleared() {
-		_spec.ClearField(countrylocation.FieldCountryID, field.TypeUint64)
-	}
-	if value, ok := cluo.mutation.ParentID(); ok {
-		_spec.SetField(countrylocation.FieldParentID, field.TypeUint64, value)
-	}
-	if value, ok := cluo.mutation.AddedParentID(); ok {
-		_spec.AddField(countrylocation.FieldParentID, field.TypeUint64, value)
-	}
-	if cluo.mutation.ParentIDCleared() {
-		_spec.ClearField(countrylocation.FieldParentID, field.TypeUint64)
-	}
 	if value, ok := cluo.mutation.Sorting(); ok {
 		_spec.SetField(countrylocation.FieldSorting, field.TypeUint64, value)
 	}
@@ -583,6 +739,109 @@ func (cluo *CountryLocationUpdateOne) sqlSave(ctx context.Context) (_node *Count
 	}
 	if cluo.mutation.DeletedAtCleared() {
 		_spec.ClearField(countrylocation.FieldDeletedAt, field.TypeTime)
+	}
+	if cluo.mutation.CountryCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.CountryTable,
+			Columns: []string{countrylocation.CountryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(country.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cluo.mutation.CountryIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.CountryTable,
+			Columns: []string{countrylocation.CountryColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(country.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if cluo.mutation.ParentCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.ParentTable,
+			Columns: []string{countrylocation.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cluo.mutation.ParentIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   countrylocation.ParentTable,
+			Columns: []string{countrylocation.ParentColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if cluo.mutation.ChildLocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   countrylocation.ChildLocationsTable,
+			Columns: []string{countrylocation.ChildLocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cluo.mutation.RemovedChildLocationsIDs(); len(nodes) > 0 && !cluo.mutation.ChildLocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   countrylocation.ChildLocationsTable,
+			Columns: []string{countrylocation.ChildLocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cluo.mutation.ChildLocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   countrylocation.ChildLocationsTable,
+			Columns: []string{countrylocation.ChildLocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &CountryLocation{config: cluo.config}
 	_spec.Assign = _node.assignValues

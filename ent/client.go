@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
 
@@ -316,6 +317,22 @@ func (c *CountryClient) GetX(ctx context.Context, id uint64) *Country {
 	return obj
 }
 
+// QueryLocations queries the locations edge of a Country.
+func (c *CountryClient) QueryLocations(co *Country) *CountryLocationQuery {
+	query := (&CountryLocationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := co.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(country.Table, country.FieldID, id),
+			sqlgraph.To(countrylocation.Table, countrylocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, country.LocationsTable, country.LocationsColumn),
+		)
+		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *CountryClient) Hooks() []Hook {
 	return c.hooks.Country
@@ -447,6 +464,54 @@ func (c *CountryLocationClient) GetX(ctx context.Context, id uint64) *CountryLoc
 		panic(err)
 	}
 	return obj
+}
+
+// QueryCountry queries the country edge of a CountryLocation.
+func (c *CountryLocationClient) QueryCountry(cl *CountryLocation) *CountryQuery {
+	query := (&CountryClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := cl.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(countrylocation.Table, countrylocation.FieldID, id),
+			sqlgraph.To(country.Table, country.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, countrylocation.CountryTable, countrylocation.CountryColumn),
+		)
+		fromV = sqlgraph.Neighbors(cl.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryParent queries the parent edge of a CountryLocation.
+func (c *CountryLocationClient) QueryParent(cl *CountryLocation) *CountryLocationQuery {
+	query := (&CountryLocationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := cl.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(countrylocation.Table, countrylocation.FieldID, id),
+			sqlgraph.To(countrylocation.Table, countrylocation.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, countrylocation.ParentTable, countrylocation.ParentColumn),
+		)
+		fromV = sqlgraph.Neighbors(cl.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryChildLocations queries the child_locations edge of a CountryLocation.
+func (c *CountryLocationClient) QueryChildLocations(cl *CountryLocation) *CountryLocationQuery {
+	query := (&CountryLocationClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := cl.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(countrylocation.Table, countrylocation.FieldID, id),
+			sqlgraph.To(countrylocation.Table, countrylocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, countrylocation.ChildLocationsTable, countrylocation.ChildLocationsColumn),
+		)
+		fromV = sqlgraph.Neighbors(cl.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

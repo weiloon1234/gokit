@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/weiloon1234/gokit/ent/predicate"
 )
 
@@ -114,26 +115,6 @@ func CountryIDNotIn(vs ...uint64) predicate.CountryLocation {
 	return predicate.CountryLocation(sql.FieldNotIn(FieldCountryID, vs...))
 }
 
-// CountryIDGT applies the GT predicate on the "country_id" field.
-func CountryIDGT(v uint64) predicate.CountryLocation {
-	return predicate.CountryLocation(sql.FieldGT(FieldCountryID, v))
-}
-
-// CountryIDGTE applies the GTE predicate on the "country_id" field.
-func CountryIDGTE(v uint64) predicate.CountryLocation {
-	return predicate.CountryLocation(sql.FieldGTE(FieldCountryID, v))
-}
-
-// CountryIDLT applies the LT predicate on the "country_id" field.
-func CountryIDLT(v uint64) predicate.CountryLocation {
-	return predicate.CountryLocation(sql.FieldLT(FieldCountryID, v))
-}
-
-// CountryIDLTE applies the LTE predicate on the "country_id" field.
-func CountryIDLTE(v uint64) predicate.CountryLocation {
-	return predicate.CountryLocation(sql.FieldLTE(FieldCountryID, v))
-}
-
 // CountryIDIsNil applies the IsNil predicate on the "country_id" field.
 func CountryIDIsNil() predicate.CountryLocation {
 	return predicate.CountryLocation(sql.FieldIsNull(FieldCountryID))
@@ -162,26 +143,6 @@ func ParentIDIn(vs ...uint64) predicate.CountryLocation {
 // ParentIDNotIn applies the NotIn predicate on the "parent_id" field.
 func ParentIDNotIn(vs ...uint64) predicate.CountryLocation {
 	return predicate.CountryLocation(sql.FieldNotIn(FieldParentID, vs...))
-}
-
-// ParentIDGT applies the GT predicate on the "parent_id" field.
-func ParentIDGT(v uint64) predicate.CountryLocation {
-	return predicate.CountryLocation(sql.FieldGT(FieldParentID, v))
-}
-
-// ParentIDGTE applies the GTE predicate on the "parent_id" field.
-func ParentIDGTE(v uint64) predicate.CountryLocation {
-	return predicate.CountryLocation(sql.FieldGTE(FieldParentID, v))
-}
-
-// ParentIDLT applies the LT predicate on the "parent_id" field.
-func ParentIDLT(v uint64) predicate.CountryLocation {
-	return predicate.CountryLocation(sql.FieldLT(FieldParentID, v))
-}
-
-// ParentIDLTE applies the LTE predicate on the "parent_id" field.
-func ParentIDLTE(v uint64) predicate.CountryLocation {
-	return predicate.CountryLocation(sql.FieldLTE(FieldParentID, v))
 }
 
 // ParentIDIsNil applies the IsNil predicate on the "parent_id" field.
@@ -492,6 +453,75 @@ func DeletedAtIsNil() predicate.CountryLocation {
 // DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
 func DeletedAtNotNil() predicate.CountryLocation {
 	return predicate.CountryLocation(sql.FieldNotNull(FieldDeletedAt))
+}
+
+// HasCountry applies the HasEdge predicate on the "country" edge.
+func HasCountry() predicate.CountryLocation {
+	return predicate.CountryLocation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, CountryTable, CountryColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCountryWith applies the HasEdge predicate on the "country" edge with a given conditions (other predicates).
+func HasCountryWith(preds ...predicate.Country) predicate.CountryLocation {
+	return predicate.CountryLocation(func(s *sql.Selector) {
+		step := newCountryStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasParent applies the HasEdge predicate on the "parent" edge.
+func HasParent() predicate.CountryLocation {
+	return predicate.CountryLocation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ParentTable, ParentColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasParentWith applies the HasEdge predicate on the "parent" edge with a given conditions (other predicates).
+func HasParentWith(preds ...predicate.CountryLocation) predicate.CountryLocation {
+	return predicate.CountryLocation(func(s *sql.Selector) {
+		step := newParentStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasChildLocations applies the HasEdge predicate on the "child_locations" edge.
+func HasChildLocations() predicate.CountryLocation {
+	return predicate.CountryLocation(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ChildLocationsTable, ChildLocationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasChildLocationsWith applies the HasEdge predicate on the "child_locations" edge with a given conditions (other predicates).
+func HasChildLocationsWith(preds ...predicate.CountryLocation) predicate.CountryLocation {
+	return predicate.CountryLocation(func(s *sql.Selector) {
+		step := newChildLocationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
 )
 
@@ -32,8 +33,55 @@ type CountryLocation struct {
 	// Record update timestamp
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// Record deletion timestamp
-	DeletedAt    *time.Time `json:"deleted_at,omitempty"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the CountryLocationQuery when eager-loading is set.
+	Edges        CountryLocationEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// CountryLocationEdges holds the relations/edges for other nodes in the graph.
+type CountryLocationEdges struct {
+	// Country of the location
+	Country *Country `json:"country,omitempty"`
+	// Parent location (e.g., state of an area)
+	Parent *CountryLocation `json:"parent,omitempty"`
+	// Child locations of this parent
+	ChildLocations []*CountryLocation `json:"child_locations,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [3]bool
+}
+
+// CountryOrErr returns the Country value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CountryLocationEdges) CountryOrErr() (*Country, error) {
+	if e.Country != nil {
+		return e.Country, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: country.Label}
+	}
+	return nil, &NotLoadedError{edge: "country"}
+}
+
+// ParentOrErr returns the Parent value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e CountryLocationEdges) ParentOrErr() (*CountryLocation, error) {
+	if e.Parent != nil {
+		return e.Parent, nil
+	} else if e.loadedTypes[1] {
+		return nil, &NotFoundError{label: countrylocation.Label}
+	}
+	return nil, &NotLoadedError{edge: "parent"}
+}
+
+// ChildLocationsOrErr returns the ChildLocations value or an error if the edge
+// was not loaded in eager-loading.
+func (e CountryLocationEdges) ChildLocationsOrErr() ([]*CountryLocation, error) {
+	if e.loadedTypes[2] {
+		return e.ChildLocations, nil
+	}
+	return nil, &NotLoadedError{edge: "child_locations"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -130,6 +178,21 @@ func (cl *CountryLocation) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (cl *CountryLocation) Value(name string) (ent.Value, error) {
 	return cl.selectValues.Get(name)
+}
+
+// QueryCountry queries the "country" edge of the CountryLocation entity.
+func (cl *CountryLocation) QueryCountry() *CountryQuery {
+	return NewCountryLocationClient(cl.config).QueryCountry(cl)
+}
+
+// QueryParent queries the "parent" edge of the CountryLocation entity.
+func (cl *CountryLocation) QueryParent() *CountryLocationQuery {
+	return NewCountryLocationClient(cl.config).QueryParent(cl)
+}
+
+// QueryChildLocations queries the "child_locations" edge of the CountryLocation entity.
+func (cl *CountryLocation) QueryChildLocations() *CountryLocationQuery {
+	return NewCountryLocationClient(cl.config).QueryChildLocations(cl)
 }
 
 // Update returns a builder for updating this CountryLocation.

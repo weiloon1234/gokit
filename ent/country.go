@@ -44,8 +44,29 @@ type Country struct {
 	// Record creation timestamp
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Record update timestamp
-	UpdatedAt    time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the CountryQuery when eager-loading is set.
+	Edges        CountryEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// CountryEdges holds the relations/edges for other nodes in the graph.
+type CountryEdges struct {
+	// Locations belonging to the country
+	Locations []*CountryLocation `json:"locations,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// LocationsOrErr returns the Locations value or an error if the edge
+// was not loaded in eager-loading.
+func (e CountryEdges) LocationsOrErr() ([]*CountryLocation, error) {
+	if e.loadedTypes[0] {
+		return e.Locations, nil
+	}
+	return nil, &NotLoadedError{edge: "locations"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -184,6 +205,11 @@ func (c *Country) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (c *Country) Value(name string) (ent.Value, error) {
 	return c.selectValues.Get(name)
+}
+
+// QueryLocations queries the "locations" edge of the Country entity.
+func (c *Country) QueryLocations() *CountryLocationQuery {
+	return NewCountryClient(c.config).QueryLocations(c)
 }
 
 // Update returns a builder for updating this Country.

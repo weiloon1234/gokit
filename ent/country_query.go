@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,16 +13,18 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/weiloon1234/gokit/ent/country"
+	"github.com/weiloon1234/gokit/ent/countrylocation"
 	"github.com/weiloon1234/gokit/ent/predicate"
 )
 
 // CountryQuery is the builder for querying Country entities.
 type CountryQuery struct {
 	config
-	ctx        *QueryContext
-	order      []country.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Country
+	ctx           *QueryContext
+	order         []country.OrderOption
+	inters        []Interceptor
+	predicates    []predicate.Country
+	withLocations *CountryLocationQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -56,6 +59,28 @@ func (cq *CountryQuery) Unique(unique bool) *CountryQuery {
 func (cq *CountryQuery) Order(o ...country.OrderOption) *CountryQuery {
 	cq.order = append(cq.order, o...)
 	return cq
+}
+
+// QueryLocations chains the current query on the "locations" edge.
+func (cq *CountryQuery) QueryLocations() *CountryLocationQuery {
+	query := (&CountryLocationClient{config: cq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(country.Table, country.FieldID, selector),
+			sqlgraph.To(countrylocation.Table, countrylocation.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, country.LocationsTable, country.LocationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
 }
 
 // First returns the first Country entity from the query.
@@ -245,15 +270,27 @@ func (cq *CountryQuery) Clone() *CountryQuery {
 		return nil
 	}
 	return &CountryQuery{
-		config:     cq.config,
-		ctx:        cq.ctx.Clone(),
-		order:      append([]country.OrderOption{}, cq.order...),
-		inters:     append([]Interceptor{}, cq.inters...),
-		predicates: append([]predicate.Country{}, cq.predicates...),
+		config:        cq.config,
+		ctx:           cq.ctx.Clone(),
+		order:         append([]country.OrderOption{}, cq.order...),
+		inters:        append([]Interceptor{}, cq.inters...),
+		predicates:    append([]predicate.Country{}, cq.predicates...),
+		withLocations: cq.withLocations.Clone(),
 		// clone intermediate query.
 		sql:  cq.sql.Clone(),
 		path: cq.path,
 	}
+}
+
+// WithLocations tells the query-builder to eager-load the nodes that are connected to
+// the "locations" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CountryQuery) WithLocations(opts ...func(*CountryLocationQuery)) *CountryQuery {
+	query := (&CountryLocationClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withLocations = query
+	return cq
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -332,8 +369,11 @@ func (cq *CountryQuery) prepareQuery(ctx context.Context) error {
 
 func (cq *CountryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Country, error) {
 	var (
-		nodes = []*Country{}
-		_spec = cq.querySpec()
+		nodes       = []*Country{}
+		_spec       = cq.querySpec()
+		loadedTypes = [1]bool{
+			cq.withLocations != nil,
+		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*Country).scanValues(nil, columns)
@@ -341,6 +381,7 @@ func (cq *CountryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Coun
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Country{config: cq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -352,7 +393,48 @@ func (cq *CountryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Coun
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := cq.withLocations; query != nil {
+		if err := cq.loadLocations(ctx, query, nodes,
+			func(n *Country) { n.Edges.Locations = []*CountryLocation{} },
+			func(n *Country, e *CountryLocation) { n.Edges.Locations = append(n.Edges.Locations, e) }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (cq *CountryQuery) loadLocations(ctx context.Context, query *CountryLocationQuery, nodes []*Country, init func(*Country), assign func(*Country, *CountryLocation)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint64]*Country)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(countrylocation.FieldCountryID)
+	}
+	query.Where(predicate.CountryLocation(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(country.LocationsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CountryID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "country_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "country_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
 }
 
 func (cq *CountryQuery) sqlCount(ctx context.Context) (int, error) {

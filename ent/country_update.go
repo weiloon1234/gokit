@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/weiloon1234/gokit/ent/country"
+	"github.com/weiloon1234/gokit/ent/countrylocation"
 	"github.com/weiloon1234/gokit/ent/predicate"
 )
 
@@ -272,9 +273,45 @@ func (cu *CountryUpdate) SetUpdatedAt(t time.Time) *CountryUpdate {
 	return cu
 }
 
+// AddLocationIDs adds the "locations" edge to the CountryLocation entity by IDs.
+func (cu *CountryUpdate) AddLocationIDs(ids ...uint64) *CountryUpdate {
+	cu.mutation.AddLocationIDs(ids...)
+	return cu
+}
+
+// AddLocations adds the "locations" edges to the CountryLocation entity.
+func (cu *CountryUpdate) AddLocations(c ...*CountryLocation) *CountryUpdate {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return cu.AddLocationIDs(ids...)
+}
+
 // Mutation returns the CountryMutation object of the builder.
 func (cu *CountryUpdate) Mutation() *CountryMutation {
 	return cu.mutation
+}
+
+// ClearLocations clears all "locations" edges to the CountryLocation entity.
+func (cu *CountryUpdate) ClearLocations() *CountryUpdate {
+	cu.mutation.ClearLocations()
+	return cu
+}
+
+// RemoveLocationIDs removes the "locations" edge to CountryLocation entities by IDs.
+func (cu *CountryUpdate) RemoveLocationIDs(ids ...uint64) *CountryUpdate {
+	cu.mutation.RemoveLocationIDs(ids...)
+	return cu
+}
+
+// RemoveLocations removes "locations" edges to CountryLocation entities.
+func (cu *CountryUpdate) RemoveLocations(c ...*CountryLocation) *CountryUpdate {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return cu.RemoveLocationIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -413,6 +450,51 @@ func (cu *CountryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := cu.mutation.UpdatedAt(); ok {
 		_spec.SetField(country.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if cu.mutation.LocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.LocationsTable,
+			Columns: []string{country.LocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.RemovedLocationsIDs(); len(nodes) > 0 && !cu.mutation.LocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.LocationsTable,
+			Columns: []string{country.LocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.LocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.LocationsTable,
+			Columns: []string{country.LocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, cu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -678,9 +760,45 @@ func (cuo *CountryUpdateOne) SetUpdatedAt(t time.Time) *CountryUpdateOne {
 	return cuo
 }
 
+// AddLocationIDs adds the "locations" edge to the CountryLocation entity by IDs.
+func (cuo *CountryUpdateOne) AddLocationIDs(ids ...uint64) *CountryUpdateOne {
+	cuo.mutation.AddLocationIDs(ids...)
+	return cuo
+}
+
+// AddLocations adds the "locations" edges to the CountryLocation entity.
+func (cuo *CountryUpdateOne) AddLocations(c ...*CountryLocation) *CountryUpdateOne {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return cuo.AddLocationIDs(ids...)
+}
+
 // Mutation returns the CountryMutation object of the builder.
 func (cuo *CountryUpdateOne) Mutation() *CountryMutation {
 	return cuo.mutation
+}
+
+// ClearLocations clears all "locations" edges to the CountryLocation entity.
+func (cuo *CountryUpdateOne) ClearLocations() *CountryUpdateOne {
+	cuo.mutation.ClearLocations()
+	return cuo
+}
+
+// RemoveLocationIDs removes the "locations" edge to CountryLocation entities by IDs.
+func (cuo *CountryUpdateOne) RemoveLocationIDs(ids ...uint64) *CountryUpdateOne {
+	cuo.mutation.RemoveLocationIDs(ids...)
+	return cuo
+}
+
+// RemoveLocations removes "locations" edges to CountryLocation entities.
+func (cuo *CountryUpdateOne) RemoveLocations(c ...*CountryLocation) *CountryUpdateOne {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return cuo.RemoveLocationIDs(ids...)
 }
 
 // Where appends a list predicates to the CountryUpdate builder.
@@ -849,6 +967,51 @@ func (cuo *CountryUpdateOne) sqlSave(ctx context.Context) (_node *Country, err e
 	}
 	if value, ok := cuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(country.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if cuo.mutation.LocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.LocationsTable,
+			Columns: []string{country.LocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.RemovedLocationsIDs(); len(nodes) > 0 && !cuo.mutation.LocationsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.LocationsTable,
+			Columns: []string{country.LocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.LocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.LocationsTable,
+			Columns: []string{country.LocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Country{config: cuo.config}
 	_spec.Assign = _node.assignValues

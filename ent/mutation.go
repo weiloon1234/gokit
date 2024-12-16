@@ -52,6 +52,9 @@ type CountryMutation struct {
 	created_at         *time.Time
 	updated_at         *time.Time
 	clearedFields      map[string]struct{}
+	locations          map[uint64]struct{}
+	removedlocations   map[uint64]struct{}
+	clearedlocations   bool
 	done               bool
 	oldValue           func(context.Context) (*Country, error)
 	predicates         []predicate.Country
@@ -796,6 +799,60 @@ func (m *CountryMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
+// AddLocationIDs adds the "locations" edge to the CountryLocation entity by ids.
+func (m *CountryMutation) AddLocationIDs(ids ...uint64) {
+	if m.locations == nil {
+		m.locations = make(map[uint64]struct{})
+	}
+	for i := range ids {
+		m.locations[ids[i]] = struct{}{}
+	}
+}
+
+// ClearLocations clears the "locations" edge to the CountryLocation entity.
+func (m *CountryMutation) ClearLocations() {
+	m.clearedlocations = true
+}
+
+// LocationsCleared reports if the "locations" edge to the CountryLocation entity was cleared.
+func (m *CountryMutation) LocationsCleared() bool {
+	return m.clearedlocations
+}
+
+// RemoveLocationIDs removes the "locations" edge to the CountryLocation entity by IDs.
+func (m *CountryMutation) RemoveLocationIDs(ids ...uint64) {
+	if m.removedlocations == nil {
+		m.removedlocations = make(map[uint64]struct{})
+	}
+	for i := range ids {
+		delete(m.locations, ids[i])
+		m.removedlocations[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedLocations returns the removed IDs of the "locations" edge to the CountryLocation entity.
+func (m *CountryMutation) RemovedLocationsIDs() (ids []uint64) {
+	for id := range m.removedlocations {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// LocationsIDs returns the "locations" edge IDs in the mutation.
+func (m *CountryMutation) LocationsIDs() (ids []uint64) {
+	for id := range m.locations {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetLocations resets all changes to the "locations" edge.
+func (m *CountryMutation) ResetLocations() {
+	m.locations = nil
+	m.clearedlocations = false
+	m.removedlocations = nil
+}
+
 // Where appends a list predicates to the CountryMutation builder.
 func (m *CountryMutation) Where(ps ...predicate.Country) {
 	m.predicates = append(m.predicates, ps...)
@@ -1222,73 +1279,112 @@ func (m *CountryMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CountryMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.locations != nil {
+		edges = append(edges, country.EdgeLocations)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *CountryMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case country.EdgeLocations:
+		ids := make([]ent.Value, 0, len(m.locations))
+		for id := range m.locations {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CountryMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedlocations != nil {
+		edges = append(edges, country.EdgeLocations)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *CountryMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case country.EdgeLocations:
+		ids := make([]ent.Value, 0, len(m.removedlocations))
+		for id := range m.removedlocations {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CountryMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedlocations {
+		edges = append(edges, country.EdgeLocations)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *CountryMutation) EdgeCleared(name string) bool {
+	switch name {
+	case country.EdgeLocations:
+		return m.clearedlocations
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *CountryMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Country unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *CountryMutation) ResetEdge(name string) error {
+	switch name {
+	case country.EdgeLocations:
+		m.ResetLocations()
+		return nil
+	}
 	return fmt.Errorf("unknown Country edge %s", name)
 }
 
 // CountryLocationMutation represents an operation that mutates the CountryLocation nodes in the graph.
 type CountryLocationMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uint64
-	country_id    *uint64
-	addcountry_id *int64
-	parent_id     *uint64
-	addparent_id  *int64
-	sorting       *uint64
-	addsorting    *int64
-	name_en       *string
-	name_zh       *string
-	created_at    *time.Time
-	updated_at    *time.Time
-	deleted_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*CountryLocation, error)
-	predicates    []predicate.CountryLocation
+	op                     Op
+	typ                    string
+	id                     *uint64
+	sorting                *uint64
+	addsorting             *int64
+	name_en                *string
+	name_zh                *string
+	created_at             *time.Time
+	updated_at             *time.Time
+	deleted_at             *time.Time
+	clearedFields          map[string]struct{}
+	country                *uint64
+	clearedcountry         bool
+	parent                 *uint64
+	clearedparent          bool
+	child_locations        map[uint64]struct{}
+	removedchild_locations map[uint64]struct{}
+	clearedchild_locations bool
+	done                   bool
+	oldValue               func(context.Context) (*CountryLocation, error)
+	predicates             []predicate.CountryLocation
 }
 
 var _ ent.Mutation = (*CountryLocationMutation)(nil)
@@ -1397,13 +1493,12 @@ func (m *CountryLocationMutation) IDs(ctx context.Context) ([]uint64, error) {
 
 // SetCountryID sets the "country_id" field.
 func (m *CountryLocationMutation) SetCountryID(u uint64) {
-	m.country_id = &u
-	m.addcountry_id = nil
+	m.country = &u
 }
 
 // CountryID returns the value of the "country_id" field in the mutation.
 func (m *CountryLocationMutation) CountryID() (r uint64, exists bool) {
-	v := m.country_id
+	v := m.country
 	if v == nil {
 		return
 	}
@@ -1427,28 +1522,9 @@ func (m *CountryLocationMutation) OldCountryID(ctx context.Context) (v *uint64, 
 	return oldValue.CountryID, nil
 }
 
-// AddCountryID adds u to the "country_id" field.
-func (m *CountryLocationMutation) AddCountryID(u int64) {
-	if m.addcountry_id != nil {
-		*m.addcountry_id += u
-	} else {
-		m.addcountry_id = &u
-	}
-}
-
-// AddedCountryID returns the value that was added to the "country_id" field in this mutation.
-func (m *CountryLocationMutation) AddedCountryID() (r int64, exists bool) {
-	v := m.addcountry_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearCountryID clears the value of the "country_id" field.
 func (m *CountryLocationMutation) ClearCountryID() {
-	m.country_id = nil
-	m.addcountry_id = nil
+	m.country = nil
 	m.clearedFields[countrylocation.FieldCountryID] = struct{}{}
 }
 
@@ -1460,20 +1536,18 @@ func (m *CountryLocationMutation) CountryIDCleared() bool {
 
 // ResetCountryID resets all changes to the "country_id" field.
 func (m *CountryLocationMutation) ResetCountryID() {
-	m.country_id = nil
-	m.addcountry_id = nil
+	m.country = nil
 	delete(m.clearedFields, countrylocation.FieldCountryID)
 }
 
 // SetParentID sets the "parent_id" field.
 func (m *CountryLocationMutation) SetParentID(u uint64) {
-	m.parent_id = &u
-	m.addparent_id = nil
+	m.parent = &u
 }
 
 // ParentID returns the value of the "parent_id" field in the mutation.
 func (m *CountryLocationMutation) ParentID() (r uint64, exists bool) {
-	v := m.parent_id
+	v := m.parent
 	if v == nil {
 		return
 	}
@@ -1497,28 +1571,9 @@ func (m *CountryLocationMutation) OldParentID(ctx context.Context) (v *uint64, e
 	return oldValue.ParentID, nil
 }
 
-// AddParentID adds u to the "parent_id" field.
-func (m *CountryLocationMutation) AddParentID(u int64) {
-	if m.addparent_id != nil {
-		*m.addparent_id += u
-	} else {
-		m.addparent_id = &u
-	}
-}
-
-// AddedParentID returns the value that was added to the "parent_id" field in this mutation.
-func (m *CountryLocationMutation) AddedParentID() (r int64, exists bool) {
-	v := m.addparent_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
 // ClearParentID clears the value of the "parent_id" field.
 func (m *CountryLocationMutation) ClearParentID() {
-	m.parent_id = nil
-	m.addparent_id = nil
+	m.parent = nil
 	m.clearedFields[countrylocation.FieldParentID] = struct{}{}
 }
 
@@ -1530,8 +1585,7 @@ func (m *CountryLocationMutation) ParentIDCleared() bool {
 
 // ResetParentID resets all changes to the "parent_id" field.
 func (m *CountryLocationMutation) ResetParentID() {
-	m.parent_id = nil
-	m.addparent_id = nil
+	m.parent = nil
 	delete(m.clearedFields, countrylocation.FieldParentID)
 }
 
@@ -1784,6 +1838,114 @@ func (m *CountryLocationMutation) ResetDeletedAt() {
 	delete(m.clearedFields, countrylocation.FieldDeletedAt)
 }
 
+// ClearCountry clears the "country" edge to the Country entity.
+func (m *CountryLocationMutation) ClearCountry() {
+	m.clearedcountry = true
+	m.clearedFields[countrylocation.FieldCountryID] = struct{}{}
+}
+
+// CountryCleared reports if the "country" edge to the Country entity was cleared.
+func (m *CountryLocationMutation) CountryCleared() bool {
+	return m.CountryIDCleared() || m.clearedcountry
+}
+
+// CountryIDs returns the "country" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// CountryID instead. It exists only for internal usage by the builders.
+func (m *CountryLocationMutation) CountryIDs() (ids []uint64) {
+	if id := m.country; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetCountry resets all changes to the "country" edge.
+func (m *CountryLocationMutation) ResetCountry() {
+	m.country = nil
+	m.clearedcountry = false
+}
+
+// ClearParent clears the "parent" edge to the CountryLocation entity.
+func (m *CountryLocationMutation) ClearParent() {
+	m.clearedparent = true
+	m.clearedFields[countrylocation.FieldParentID] = struct{}{}
+}
+
+// ParentCleared reports if the "parent" edge to the CountryLocation entity was cleared.
+func (m *CountryLocationMutation) ParentCleared() bool {
+	return m.ParentIDCleared() || m.clearedparent
+}
+
+// ParentIDs returns the "parent" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ParentID instead. It exists only for internal usage by the builders.
+func (m *CountryLocationMutation) ParentIDs() (ids []uint64) {
+	if id := m.parent; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetParent resets all changes to the "parent" edge.
+func (m *CountryLocationMutation) ResetParent() {
+	m.parent = nil
+	m.clearedparent = false
+}
+
+// AddChildLocationIDs adds the "child_locations" edge to the CountryLocation entity by ids.
+func (m *CountryLocationMutation) AddChildLocationIDs(ids ...uint64) {
+	if m.child_locations == nil {
+		m.child_locations = make(map[uint64]struct{})
+	}
+	for i := range ids {
+		m.child_locations[ids[i]] = struct{}{}
+	}
+}
+
+// ClearChildLocations clears the "child_locations" edge to the CountryLocation entity.
+func (m *CountryLocationMutation) ClearChildLocations() {
+	m.clearedchild_locations = true
+}
+
+// ChildLocationsCleared reports if the "child_locations" edge to the CountryLocation entity was cleared.
+func (m *CountryLocationMutation) ChildLocationsCleared() bool {
+	return m.clearedchild_locations
+}
+
+// RemoveChildLocationIDs removes the "child_locations" edge to the CountryLocation entity by IDs.
+func (m *CountryLocationMutation) RemoveChildLocationIDs(ids ...uint64) {
+	if m.removedchild_locations == nil {
+		m.removedchild_locations = make(map[uint64]struct{})
+	}
+	for i := range ids {
+		delete(m.child_locations, ids[i])
+		m.removedchild_locations[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedChildLocations returns the removed IDs of the "child_locations" edge to the CountryLocation entity.
+func (m *CountryLocationMutation) RemovedChildLocationsIDs() (ids []uint64) {
+	for id := range m.removedchild_locations {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ChildLocationsIDs returns the "child_locations" edge IDs in the mutation.
+func (m *CountryLocationMutation) ChildLocationsIDs() (ids []uint64) {
+	for id := range m.child_locations {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetChildLocations resets all changes to the "child_locations" edge.
+func (m *CountryLocationMutation) ResetChildLocations() {
+	m.child_locations = nil
+	m.clearedchild_locations = false
+	m.removedchild_locations = nil
+}
+
 // Where appends a list predicates to the CountryLocationMutation builder.
 func (m *CountryLocationMutation) Where(ps ...predicate.CountryLocation) {
 	m.predicates = append(m.predicates, ps...)
@@ -1819,10 +1981,10 @@ func (m *CountryLocationMutation) Type() string {
 // AddedFields().
 func (m *CountryLocationMutation) Fields() []string {
 	fields := make([]string, 0, 8)
-	if m.country_id != nil {
+	if m.country != nil {
 		fields = append(fields, countrylocation.FieldCountryID)
 	}
-	if m.parent_id != nil {
+	if m.parent != nil {
 		fields = append(fields, countrylocation.FieldParentID)
 	}
 	if m.sorting != nil {
@@ -1965,12 +2127,6 @@ func (m *CountryLocationMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *CountryLocationMutation) AddedFields() []string {
 	var fields []string
-	if m.addcountry_id != nil {
-		fields = append(fields, countrylocation.FieldCountryID)
-	}
-	if m.addparent_id != nil {
-		fields = append(fields, countrylocation.FieldParentID)
-	}
 	if m.addsorting != nil {
 		fields = append(fields, countrylocation.FieldSorting)
 	}
@@ -1982,10 +2138,6 @@ func (m *CountryLocationMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *CountryLocationMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case countrylocation.FieldCountryID:
-		return m.AddedCountryID()
-	case countrylocation.FieldParentID:
-		return m.AddedParentID()
 	case countrylocation.FieldSorting:
 		return m.AddedSorting()
 	}
@@ -1997,20 +2149,6 @@ func (m *CountryLocationMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *CountryLocationMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case countrylocation.FieldCountryID:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddCountryID(v)
-		return nil
-	case countrylocation.FieldParentID:
-		v, ok := value.(int64)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddParentID(v)
-		return nil
 	case countrylocation.FieldSorting:
 		v, ok := value.(int64)
 		if !ok {
@@ -2096,48 +2234,120 @@ func (m *CountryLocationMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CountryLocationMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 3)
+	if m.country != nil {
+		edges = append(edges, countrylocation.EdgeCountry)
+	}
+	if m.parent != nil {
+		edges = append(edges, countrylocation.EdgeParent)
+	}
+	if m.child_locations != nil {
+		edges = append(edges, countrylocation.EdgeChildLocations)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *CountryLocationMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case countrylocation.EdgeCountry:
+		if id := m.country; id != nil {
+			return []ent.Value{*id}
+		}
+	case countrylocation.EdgeParent:
+		if id := m.parent; id != nil {
+			return []ent.Value{*id}
+		}
+	case countrylocation.EdgeChildLocations:
+		ids := make([]ent.Value, 0, len(m.child_locations))
+		for id := range m.child_locations {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CountryLocationMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 3)
+	if m.removedchild_locations != nil {
+		edges = append(edges, countrylocation.EdgeChildLocations)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *CountryLocationMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case countrylocation.EdgeChildLocations:
+		ids := make([]ent.Value, 0, len(m.removedchild_locations))
+		for id := range m.removedchild_locations {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CountryLocationMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 3)
+	if m.clearedcountry {
+		edges = append(edges, countrylocation.EdgeCountry)
+	}
+	if m.clearedparent {
+		edges = append(edges, countrylocation.EdgeParent)
+	}
+	if m.clearedchild_locations {
+		edges = append(edges, countrylocation.EdgeChildLocations)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *CountryLocationMutation) EdgeCleared(name string) bool {
+	switch name {
+	case countrylocation.EdgeCountry:
+		return m.clearedcountry
+	case countrylocation.EdgeParent:
+		return m.clearedparent
+	case countrylocation.EdgeChildLocations:
+		return m.clearedchild_locations
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *CountryLocationMutation) ClearEdge(name string) error {
+	switch name {
+	case countrylocation.EdgeCountry:
+		m.ClearCountry()
+		return nil
+	case countrylocation.EdgeParent:
+		m.ClearParent()
+		return nil
+	}
 	return fmt.Errorf("unknown CountryLocation unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *CountryLocationMutation) ResetEdge(name string) error {
+	switch name {
+	case countrylocation.EdgeCountry:
+		m.ResetCountry()
+		return nil
+	case countrylocation.EdgeParent:
+		m.ResetParent()
+		return nil
+	case countrylocation.EdgeChildLocations:
+		m.ResetChildLocations()
+		return nil
+	}
 	return fmt.Errorf("unknown CountryLocation edge %s", name)
 }

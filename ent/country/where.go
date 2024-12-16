@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/weiloon1234/gokit/ent/predicate"
 )
 
@@ -1002,6 +1003,29 @@ func UpdatedAtLT(v time.Time) predicate.Country {
 // UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
 func UpdatedAtLTE(v time.Time) predicate.Country {
 	return predicate.Country(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// HasLocations applies the HasEdge predicate on the "locations" edge.
+func HasLocations() predicate.Country {
+	return predicate.Country(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, LocationsTable, LocationsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasLocationsWith applies the HasEdge predicate on the "locations" edge with a given conditions (other predicates).
+func HasLocationsWith(preds ...predicate.CountryLocation) predicate.Country {
+	return predicate.Country(func(s *sql.Selector) {
+		step := newLocationsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

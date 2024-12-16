@@ -72,14 +72,13 @@ func (CountryLocation) Edges() []ent.Edge {
 
 		// Parent location of this location (e.g., state for a city)
 		edge.From("parent", CountryLocation.Type).
-			Ref("children").
+			Ref("child_locations").
 			Field("parent_id").
 			Unique().
 			Comment("Parent location (e.g., state of an area)"),
 
 		// Child locations of this location (e.g., cities under a state)
-		edge.To("children", CountryLocation.Type).
-			From("parent").
+		edge.To("child_locations", CountryLocation.Type).
 			Comment("Child locations of this parent"),
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/weiloon1234/gokit/ent/country"
+	"github.com/weiloon1234/gokit/ent/countrylocation"
 )
 
 // CountryCreate is the builder for creating a Country entity.
@@ -200,6 +201,21 @@ func (cc *CountryCreate) SetID(u uint64) *CountryCreate {
 	return cc
 }
 
+// AddLocationIDs adds the "locations" edge to the CountryLocation entity by IDs.
+func (cc *CountryCreate) AddLocationIDs(ids ...uint64) *CountryCreate {
+	cc.mutation.AddLocationIDs(ids...)
+	return cc
+}
+
+// AddLocations adds the "locations" edges to the CountryLocation entity.
+func (cc *CountryCreate) AddLocations(c ...*CountryLocation) *CountryCreate {
+	ids := make([]uint64, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return cc.AddLocationIDs(ids...)
+}
+
 // Mutation returns the CountryMutation object of the builder.
 func (cc *CountryCreate) Mutation() *CountryMutation {
 	return cc.mutation
@@ -379,6 +395,22 @@ func (cc *CountryCreate) createSpec() (*Country, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.UpdatedAt(); ok {
 		_spec.SetField(country.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
+	}
+	if nodes := cc.mutation.LocationsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.LocationsTable,
+			Columns: []string{country.LocationsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

@@ -52,30 +52,49 @@ var (
 	// CountryLocationsColumns holds the columns for the "country_locations" table.
 	CountryLocationsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint64, Increment: true},
-		{Name: "country_id", Type: field.TypeUint64, Nullable: true},
-		{Name: "parent_id", Type: field.TypeUint64, Nullable: true},
 		{Name: "sorting", Type: field.TypeUint64, Default: 0},
 		{Name: "name_en", Type: field.TypeString},
 		{Name: "name_zh", Type: field.TypeString},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "country_id", Type: field.TypeUint64, Nullable: true},
+		{Name: "parent_id", Type: field.TypeUint64, Nullable: true},
 	}
 	// CountryLocationsTable holds the schema information for the "country_locations" table.
 	CountryLocationsTable = &schema.Table{
 		Name:       "country_locations",
 		Columns:    CountryLocationsColumns,
 		PrimaryKey: []*schema.Column{CountryLocationsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "country_locations_countries_locations",
+				Columns:    []*schema.Column{CountryLocationsColumns[7]},
+				RefColumns: []*schema.Column{CountriesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "country_locations_country_locations_child_locations",
+				Columns:    []*schema.Column{CountryLocationsColumns[8]},
+				RefColumns: []*schema.Column{CountryLocationsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 		Indexes: []*schema.Index{
 			{
 				Name:    "countrylocation_country_id",
 				Unique:  false,
-				Columns: []*schema.Column{CountryLocationsColumns[1]},
+				Columns: []*schema.Column{CountryLocationsColumns[7]},
 			},
 			{
 				Name:    "countrylocation_parent_id",
 				Unique:  false,
-				Columns: []*schema.Column{CountryLocationsColumns[2]},
+				Columns: []*schema.Column{CountryLocationsColumns[8]},
+			},
+			{
+				Name:    "countrylocation_sorting",
+				Unique:  false,
+				Columns: []*schema.Column{CountryLocationsColumns[1]},
 			},
 		},
 	}
@@ -87,4 +106,6 @@ var (
 )
 
 func init() {
+	CountryLocationsTable.ForeignKeys[0].RefTable = CountriesTable
+	CountryLocationsTable.ForeignKeys[1].RefTable = CountryLocationsTable
 }
