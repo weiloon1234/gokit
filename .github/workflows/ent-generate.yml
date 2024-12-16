@@ -33,3 +33,15 @@ jobs:
 
       - name: Generate Ent code
         run: go run ent/generate.go
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          if git diff --cached --exit-code; then
+            echo "No changes to commit."
+          else
+            git commit -m "Auto-generate Ent files"
+            git push
+          fi
