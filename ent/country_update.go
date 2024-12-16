@@ -11,9 +11,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/weiloon1234/gokit/ent/bank"
 	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
 	"github.com/weiloon1234/gokit/ent/predicate"
+	"github.com/weiloon1234/gokit/ent/user"
 )
 
 // CountryUpdate is the builder for updating Country entities.
@@ -288,6 +290,51 @@ func (cu *CountryUpdate) AddLocations(c ...*CountryLocation) *CountryUpdate {
 	return cu.AddLocationIDs(ids...)
 }
 
+// AddBankIDs adds the "banks" edge to the Bank entity by IDs.
+func (cu *CountryUpdate) AddBankIDs(ids ...uint64) *CountryUpdate {
+	cu.mutation.AddBankIDs(ids...)
+	return cu
+}
+
+// AddBanks adds the "banks" edges to the Bank entity.
+func (cu *CountryUpdate) AddBanks(b ...*Bank) *CountryUpdate {
+	ids := make([]uint64, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return cu.AddBankIDs(ids...)
+}
+
+// AddUserIDs adds the "users" edge to the User entity by IDs.
+func (cu *CountryUpdate) AddUserIDs(ids ...uint64) *CountryUpdate {
+	cu.mutation.AddUserIDs(ids...)
+	return cu
+}
+
+// AddUsers adds the "users" edges to the User entity.
+func (cu *CountryUpdate) AddUsers(u ...*User) *CountryUpdate {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cu.AddUserIDs(ids...)
+}
+
+// AddContactUserIDs adds the "contact_users" edge to the User entity by IDs.
+func (cu *CountryUpdate) AddContactUserIDs(ids ...uint64) *CountryUpdate {
+	cu.mutation.AddContactUserIDs(ids...)
+	return cu
+}
+
+// AddContactUsers adds the "contact_users" edges to the User entity.
+func (cu *CountryUpdate) AddContactUsers(u ...*User) *CountryUpdate {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cu.AddContactUserIDs(ids...)
+}
+
 // Mutation returns the CountryMutation object of the builder.
 func (cu *CountryUpdate) Mutation() *CountryMutation {
 	return cu.mutation
@@ -312,6 +359,69 @@ func (cu *CountryUpdate) RemoveLocations(c ...*CountryLocation) *CountryUpdate {
 		ids[i] = c[i].ID
 	}
 	return cu.RemoveLocationIDs(ids...)
+}
+
+// ClearBanks clears all "banks" edges to the Bank entity.
+func (cu *CountryUpdate) ClearBanks() *CountryUpdate {
+	cu.mutation.ClearBanks()
+	return cu
+}
+
+// RemoveBankIDs removes the "banks" edge to Bank entities by IDs.
+func (cu *CountryUpdate) RemoveBankIDs(ids ...uint64) *CountryUpdate {
+	cu.mutation.RemoveBankIDs(ids...)
+	return cu
+}
+
+// RemoveBanks removes "banks" edges to Bank entities.
+func (cu *CountryUpdate) RemoveBanks(b ...*Bank) *CountryUpdate {
+	ids := make([]uint64, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return cu.RemoveBankIDs(ids...)
+}
+
+// ClearUsers clears all "users" edges to the User entity.
+func (cu *CountryUpdate) ClearUsers() *CountryUpdate {
+	cu.mutation.ClearUsers()
+	return cu
+}
+
+// RemoveUserIDs removes the "users" edge to User entities by IDs.
+func (cu *CountryUpdate) RemoveUserIDs(ids ...uint64) *CountryUpdate {
+	cu.mutation.RemoveUserIDs(ids...)
+	return cu
+}
+
+// RemoveUsers removes "users" edges to User entities.
+func (cu *CountryUpdate) RemoveUsers(u ...*User) *CountryUpdate {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cu.RemoveUserIDs(ids...)
+}
+
+// ClearContactUsers clears all "contact_users" edges to the User entity.
+func (cu *CountryUpdate) ClearContactUsers() *CountryUpdate {
+	cu.mutation.ClearContactUsers()
+	return cu
+}
+
+// RemoveContactUserIDs removes the "contact_users" edge to User entities by IDs.
+func (cu *CountryUpdate) RemoveContactUserIDs(ids ...uint64) *CountryUpdate {
+	cu.mutation.RemoveContactUserIDs(ids...)
+	return cu
+}
+
+// RemoveContactUsers removes "contact_users" edges to User entities.
+func (cu *CountryUpdate) RemoveContactUsers(u ...*User) *CountryUpdate {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cu.RemoveContactUserIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -489,6 +599,141 @@ func (cu *CountryUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if cu.mutation.BanksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.BanksTable,
+			Columns: []string{country.BanksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bank.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.RemovedBanksIDs(); len(nodes) > 0 && !cu.mutation.BanksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.BanksTable,
+			Columns: []string{country.BanksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bank.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.BanksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.BanksTable,
+			Columns: []string{country.BanksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bank.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if cu.mutation.UsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.UsersTable,
+			Columns: []string{country.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.RemovedUsersIDs(); len(nodes) > 0 && !cu.mutation.UsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.UsersTable,
+			Columns: []string{country.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.UsersTable,
+			Columns: []string{country.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if cu.mutation.ContactUsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.ContactUsersTable,
+			Columns: []string{country.ContactUsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.RemovedContactUsersIDs(); len(nodes) > 0 && !cu.mutation.ContactUsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.ContactUsersTable,
+			Columns: []string{country.ContactUsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.ContactUsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.ContactUsersTable,
+			Columns: []string{country.ContactUsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
 			},
 		}
 		for _, k := range nodes {
@@ -775,6 +1020,51 @@ func (cuo *CountryUpdateOne) AddLocations(c ...*CountryLocation) *CountryUpdateO
 	return cuo.AddLocationIDs(ids...)
 }
 
+// AddBankIDs adds the "banks" edge to the Bank entity by IDs.
+func (cuo *CountryUpdateOne) AddBankIDs(ids ...uint64) *CountryUpdateOne {
+	cuo.mutation.AddBankIDs(ids...)
+	return cuo
+}
+
+// AddBanks adds the "banks" edges to the Bank entity.
+func (cuo *CountryUpdateOne) AddBanks(b ...*Bank) *CountryUpdateOne {
+	ids := make([]uint64, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return cuo.AddBankIDs(ids...)
+}
+
+// AddUserIDs adds the "users" edge to the User entity by IDs.
+func (cuo *CountryUpdateOne) AddUserIDs(ids ...uint64) *CountryUpdateOne {
+	cuo.mutation.AddUserIDs(ids...)
+	return cuo
+}
+
+// AddUsers adds the "users" edges to the User entity.
+func (cuo *CountryUpdateOne) AddUsers(u ...*User) *CountryUpdateOne {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cuo.AddUserIDs(ids...)
+}
+
+// AddContactUserIDs adds the "contact_users" edge to the User entity by IDs.
+func (cuo *CountryUpdateOne) AddContactUserIDs(ids ...uint64) *CountryUpdateOne {
+	cuo.mutation.AddContactUserIDs(ids...)
+	return cuo
+}
+
+// AddContactUsers adds the "contact_users" edges to the User entity.
+func (cuo *CountryUpdateOne) AddContactUsers(u ...*User) *CountryUpdateOne {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cuo.AddContactUserIDs(ids...)
+}
+
 // Mutation returns the CountryMutation object of the builder.
 func (cuo *CountryUpdateOne) Mutation() *CountryMutation {
 	return cuo.mutation
@@ -799,6 +1089,69 @@ func (cuo *CountryUpdateOne) RemoveLocations(c ...*CountryLocation) *CountryUpda
 		ids[i] = c[i].ID
 	}
 	return cuo.RemoveLocationIDs(ids...)
+}
+
+// ClearBanks clears all "banks" edges to the Bank entity.
+func (cuo *CountryUpdateOne) ClearBanks() *CountryUpdateOne {
+	cuo.mutation.ClearBanks()
+	return cuo
+}
+
+// RemoveBankIDs removes the "banks" edge to Bank entities by IDs.
+func (cuo *CountryUpdateOne) RemoveBankIDs(ids ...uint64) *CountryUpdateOne {
+	cuo.mutation.RemoveBankIDs(ids...)
+	return cuo
+}
+
+// RemoveBanks removes "banks" edges to Bank entities.
+func (cuo *CountryUpdateOne) RemoveBanks(b ...*Bank) *CountryUpdateOne {
+	ids := make([]uint64, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return cuo.RemoveBankIDs(ids...)
+}
+
+// ClearUsers clears all "users" edges to the User entity.
+func (cuo *CountryUpdateOne) ClearUsers() *CountryUpdateOne {
+	cuo.mutation.ClearUsers()
+	return cuo
+}
+
+// RemoveUserIDs removes the "users" edge to User entities by IDs.
+func (cuo *CountryUpdateOne) RemoveUserIDs(ids ...uint64) *CountryUpdateOne {
+	cuo.mutation.RemoveUserIDs(ids...)
+	return cuo
+}
+
+// RemoveUsers removes "users" edges to User entities.
+func (cuo *CountryUpdateOne) RemoveUsers(u ...*User) *CountryUpdateOne {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cuo.RemoveUserIDs(ids...)
+}
+
+// ClearContactUsers clears all "contact_users" edges to the User entity.
+func (cuo *CountryUpdateOne) ClearContactUsers() *CountryUpdateOne {
+	cuo.mutation.ClearContactUsers()
+	return cuo
+}
+
+// RemoveContactUserIDs removes the "contact_users" edge to User entities by IDs.
+func (cuo *CountryUpdateOne) RemoveContactUserIDs(ids ...uint64) *CountryUpdateOne {
+	cuo.mutation.RemoveContactUserIDs(ids...)
+	return cuo
+}
+
+// RemoveContactUsers removes "contact_users" edges to User entities.
+func (cuo *CountryUpdateOne) RemoveContactUsers(u ...*User) *CountryUpdateOne {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cuo.RemoveContactUserIDs(ids...)
 }
 
 // Where appends a list predicates to the CountryUpdate builder.
@@ -1006,6 +1359,141 @@ func (cuo *CountryUpdateOne) sqlSave(ctx context.Context) (_node *Country, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if cuo.mutation.BanksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.BanksTable,
+			Columns: []string{country.BanksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bank.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.RemovedBanksIDs(); len(nodes) > 0 && !cuo.mutation.BanksCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.BanksTable,
+			Columns: []string{country.BanksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bank.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.BanksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.BanksTable,
+			Columns: []string{country.BanksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bank.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if cuo.mutation.UsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.UsersTable,
+			Columns: []string{country.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.RemovedUsersIDs(); len(nodes) > 0 && !cuo.mutation.UsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.UsersTable,
+			Columns: []string{country.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.UsersTable,
+			Columns: []string{country.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if cuo.mutation.ContactUsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.ContactUsersTable,
+			Columns: []string{country.ContactUsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.RemovedContactUsersIDs(); len(nodes) > 0 && !cuo.mutation.ContactUsersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.ContactUsersTable,
+			Columns: []string{country.ContactUsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.ContactUsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.ContactUsersTable,
+			Columns: []string{country.ContactUsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
 			},
 		}
 		for _, k := range nodes {

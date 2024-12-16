@@ -1028,6 +1028,75 @@ func HasLocationsWith(preds ...predicate.CountryLocation) predicate.Country {
 	})
 }
 
+// HasBanks applies the HasEdge predicate on the "banks" edge.
+func HasBanks() predicate.Country {
+	return predicate.Country(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, BanksTable, BanksColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBanksWith applies the HasEdge predicate on the "banks" edge with a given conditions (other predicates).
+func HasBanksWith(preds ...predicate.Bank) predicate.Country {
+	return predicate.Country(func(s *sql.Selector) {
+		step := newBanksStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasUsers applies the HasEdge predicate on the "users" edge.
+func HasUsers() predicate.Country {
+	return predicate.Country(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasUsersWith applies the HasEdge predicate on the "users" edge with a given conditions (other predicates).
+func HasUsersWith(preds ...predicate.User) predicate.Country {
+	return predicate.Country(func(s *sql.Selector) {
+		step := newUsersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasContactUsers applies the HasEdge predicate on the "contact_users" edge.
+func HasContactUsers() predicate.Country {
+	return predicate.Country(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ContactUsersTable, ContactUsersColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasContactUsersWith applies the HasEdge predicate on the "contact_users" edge with a given conditions (other predicates).
+func HasContactUsersWith(preds ...predicate.User) predicate.Country {
+	return predicate.Country(func(s *sql.Selector) {
+		step := newContactUsersStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Country) predicate.Country {
 	return predicate.Country(sql.AndPredicates(predicates...))

@@ -12,8 +12,11 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/weiloon1234/gokit/ent/admin"
+	"github.com/weiloon1234/gokit/ent/bank"
 	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
+	"github.com/weiloon1234/gokit/ent/user"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -74,8 +77,11 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
+			admin.Table:           admin.ValidColumn,
+			bank.Table:            bank.ValidColumn,
 			country.Table:         country.ValidColumn,
 			countrylocation.Table: countrylocation.ValidColumn,
+			user.Table:            user.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

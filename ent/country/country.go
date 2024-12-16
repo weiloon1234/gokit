@@ -44,6 +44,12 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// EdgeLocations holds the string denoting the locations edge name in mutations.
 	EdgeLocations = "locations"
+	// EdgeBanks holds the string denoting the banks edge name in mutations.
+	EdgeBanks = "banks"
+	// EdgeUsers holds the string denoting the users edge name in mutations.
+	EdgeUsers = "users"
+	// EdgeContactUsers holds the string denoting the contact_users edge name in mutations.
+	EdgeContactUsers = "contact_users"
 	// Table holds the table name of the country in the database.
 	Table = "countries"
 	// LocationsTable is the table that holds the locations relation/edge.
@@ -53,6 +59,27 @@ const (
 	LocationsInverseTable = "country_locations"
 	// LocationsColumn is the table column denoting the locations relation/edge.
 	LocationsColumn = "country_id"
+	// BanksTable is the table that holds the banks relation/edge.
+	BanksTable = "banks"
+	// BanksInverseTable is the table name for the Bank entity.
+	// It exists in this package in order to avoid circular dependency with the "bank" package.
+	BanksInverseTable = "banks"
+	// BanksColumn is the table column denoting the banks relation/edge.
+	BanksColumn = "country_id"
+	// UsersTable is the table that holds the users relation/edge.
+	UsersTable = "users"
+	// UsersInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	UsersInverseTable = "users"
+	// UsersColumn is the table column denoting the users relation/edge.
+	UsersColumn = "country_id"
+	// ContactUsersTable is the table that holds the contact_users relation/edge.
+	ContactUsersTable = "users"
+	// ContactUsersInverseTable is the table name for the User entity.
+	// It exists in this package in order to avoid circular dependency with the "user" package.
+	ContactUsersInverseTable = "users"
+	// ContactUsersColumn is the table column denoting the contact_users relation/edge.
+	ContactUsersColumn = "contact_country_id"
 )
 
 // Columns holds all SQL columns for country fields.
@@ -194,10 +221,73 @@ func ByLocations(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newLocationsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByBanksCount orders the results by banks count.
+func ByBanksCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newBanksStep(), opts...)
+	}
+}
+
+// ByBanks orders the results by banks terms.
+func ByBanks(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBanksStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByUsersCount orders the results by users count.
+func ByUsersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newUsersStep(), opts...)
+	}
+}
+
+// ByUsers orders the results by users terms.
+func ByUsers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newUsersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+
+// ByContactUsersCount orders the results by contact_users count.
+func ByContactUsersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newContactUsersStep(), opts...)
+	}
+}
+
+// ByContactUsers orders the results by contact_users terms.
+func ByContactUsers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newContactUsersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newLocationsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(LocationsInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, LocationsTable, LocationsColumn),
+	)
+}
+func newBanksStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BanksInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, BanksTable, BanksColumn),
+	)
+}
+func newUsersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(UsersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, UsersTable, UsersColumn),
+	)
+}
+func newContactUsersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ContactUsersInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ContactUsersTable, ContactUsersColumn),
 	)
 }

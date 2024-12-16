@@ -9,6 +9,30 @@ import (
 	"github.com/weiloon1234/gokit/ent"
 )
 
+// The AdminFunc type is an adapter to allow the use of ordinary
+// function as Admin mutator.
+type AdminFunc func(context.Context, *ent.AdminMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AdminFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AdminMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AdminMutation", m)
+}
+
+// The BankFunc type is an adapter to allow the use of ordinary
+// function as Bank mutator.
+type BankFunc func(context.Context, *ent.BankMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f BankFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.BankMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BankMutation", m)
+}
+
 // The CountryFunc type is an adapter to allow the use of ordinary
 // function as Country mutator.
 type CountryFunc func(context.Context, *ent.CountryMutation) (ent.Value, error)
@@ -31,6 +55,18 @@ func (f CountryLocationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CountryLocationMutation", m)
+}
+
+// The UserFunc type is an adapter to allow the use of ordinary
+// function as User mutator.
+type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f UserFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.UserMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.UserMutation", m)
 }
 
 // Condition is a hook condition function.

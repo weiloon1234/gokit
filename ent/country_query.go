@@ -12,19 +12,24 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/weiloon1234/gokit/ent/bank"
 	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
 	"github.com/weiloon1234/gokit/ent/predicate"
+	"github.com/weiloon1234/gokit/ent/user"
 )
 
 // CountryQuery is the builder for querying Country entities.
 type CountryQuery struct {
 	config
-	ctx           *QueryContext
-	order         []country.OrderOption
-	inters        []Interceptor
-	predicates    []predicate.Country
-	withLocations *CountryLocationQuery
+	ctx              *QueryContext
+	order            []country.OrderOption
+	inters           []Interceptor
+	predicates       []predicate.Country
+	withLocations    *CountryLocationQuery
+	withBanks        *BankQuery
+	withUsers        *UserQuery
+	withContactUsers *UserQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +81,72 @@ func (cq *CountryQuery) QueryLocations() *CountryLocationQuery {
 			sqlgraph.From(country.Table, country.FieldID, selector),
 			sqlgraph.To(countrylocation.Table, countrylocation.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, country.LocationsTable, country.LocationsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryBanks chains the current query on the "banks" edge.
+func (cq *CountryQuery) QueryBanks() *BankQuery {
+	query := (&BankClient{config: cq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(country.Table, country.FieldID, selector),
+			sqlgraph.To(bank.Table, bank.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, country.BanksTable, country.BanksColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryUsers chains the current query on the "users" edge.
+func (cq *CountryQuery) QueryUsers() *UserQuery {
+	query := (&UserClient{config: cq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(country.Table, country.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, country.UsersTable, country.UsersColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryContactUsers chains the current query on the "contact_users" edge.
+func (cq *CountryQuery) QueryContactUsers() *UserQuery {
+	query := (&UserClient{config: cq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(country.Table, country.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, country.ContactUsersTable, country.ContactUsersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +341,15 @@ func (cq *CountryQuery) Clone() *CountryQuery {
 		return nil
 	}
 	return &CountryQuery{
-		config:        cq.config,
-		ctx:           cq.ctx.Clone(),
-		order:         append([]country.OrderOption{}, cq.order...),
-		inters:        append([]Interceptor{}, cq.inters...),
-		predicates:    append([]predicate.Country{}, cq.predicates...),
-		withLocations: cq.withLocations.Clone(),
+		config:           cq.config,
+		ctx:              cq.ctx.Clone(),
+		order:            append([]country.OrderOption{}, cq.order...),
+		inters:           append([]Interceptor{}, cq.inters...),
+		predicates:       append([]predicate.Country{}, cq.predicates...),
+		withLocations:    cq.withLocations.Clone(),
+		withBanks:        cq.withBanks.Clone(),
+		withUsers:        cq.withUsers.Clone(),
+		withContactUsers: cq.withContactUsers.Clone(),
 		// clone intermediate query.
 		sql:  cq.sql.Clone(),
 		path: cq.path,
@@ -290,6 +364,39 @@ func (cq *CountryQuery) WithLocations(opts ...func(*CountryLocationQuery)) *Coun
 		opt(query)
 	}
 	cq.withLocations = query
+	return cq
+}
+
+// WithBanks tells the query-builder to eager-load the nodes that are connected to
+// the "banks" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CountryQuery) WithBanks(opts ...func(*BankQuery)) *CountryQuery {
+	query := (&BankClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withBanks = query
+	return cq
+}
+
+// WithUsers tells the query-builder to eager-load the nodes that are connected to
+// the "users" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CountryQuery) WithUsers(opts ...func(*UserQuery)) *CountryQuery {
+	query := (&UserClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withUsers = query
+	return cq
+}
+
+// WithContactUsers tells the query-builder to eager-load the nodes that are connected to
+// the "contact_users" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CountryQuery) WithContactUsers(opts ...func(*UserQuery)) *CountryQuery {
+	query := (&UserClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withContactUsers = query
 	return cq
 }
 
@@ -371,8 +478,11 @@ func (cq *CountryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Coun
 	var (
 		nodes       = []*Country{}
 		_spec       = cq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [4]bool{
 			cq.withLocations != nil,
+			cq.withBanks != nil,
+			cq.withUsers != nil,
+			cq.withContactUsers != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -397,6 +507,27 @@ func (cq *CountryQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Coun
 		if err := cq.loadLocations(ctx, query, nodes,
 			func(n *Country) { n.Edges.Locations = []*CountryLocation{} },
 			func(n *Country, e *CountryLocation) { n.Edges.Locations = append(n.Edges.Locations, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withBanks; query != nil {
+		if err := cq.loadBanks(ctx, query, nodes,
+			func(n *Country) { n.Edges.Banks = []*Bank{} },
+			func(n *Country, e *Bank) { n.Edges.Banks = append(n.Edges.Banks, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withUsers; query != nil {
+		if err := cq.loadUsers(ctx, query, nodes,
+			func(n *Country) { n.Edges.Users = []*User{} },
+			func(n *Country, e *User) { n.Edges.Users = append(n.Edges.Users, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withContactUsers; query != nil {
+		if err := cq.loadContactUsers(ctx, query, nodes,
+			func(n *Country) { n.Edges.ContactUsers = []*User{} },
+			func(n *Country, e *User) { n.Edges.ContactUsers = append(n.Edges.ContactUsers, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -431,6 +562,105 @@ func (cq *CountryQuery) loadLocations(ctx context.Context, query *CountryLocatio
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "country_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (cq *CountryQuery) loadBanks(ctx context.Context, query *BankQuery, nodes []*Country, init func(*Country), assign func(*Country, *Bank)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint64]*Country)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(bank.FieldCountryID)
+	}
+	query.Where(predicate.Bank(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(country.BanksColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CountryID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "country_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "country_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (cq *CountryQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*Country, init func(*Country), assign func(*Country, *User)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint64]*Country)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(user.FieldCountryID)
+	}
+	query.Where(predicate.User(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(country.UsersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.CountryID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "country_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "country_id" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (cq *CountryQuery) loadContactUsers(ctx context.Context, query *UserQuery, nodes []*Country, init func(*Country), assign func(*Country, *User)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uint64]*Country)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	if len(query.ctx.Fields) > 0 {
+		query.ctx.AppendFieldOnce(user.FieldContactCountryID)
+	}
+	query.Where(predicate.User(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(country.ContactUsersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.ContactCountryID
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "contact_country_id" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "contact_country_id" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

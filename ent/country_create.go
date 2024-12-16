@@ -11,8 +11,10 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/weiloon1234/gokit/ent/bank"
 	"github.com/weiloon1234/gokit/ent/country"
 	"github.com/weiloon1234/gokit/ent/countrylocation"
+	"github.com/weiloon1234/gokit/ent/user"
 )
 
 // CountryCreate is the builder for creating a Country entity.
@@ -216,6 +218,51 @@ func (cc *CountryCreate) AddLocations(c ...*CountryLocation) *CountryCreate {
 	return cc.AddLocationIDs(ids...)
 }
 
+// AddBankIDs adds the "banks" edge to the Bank entity by IDs.
+func (cc *CountryCreate) AddBankIDs(ids ...uint64) *CountryCreate {
+	cc.mutation.AddBankIDs(ids...)
+	return cc
+}
+
+// AddBanks adds the "banks" edges to the Bank entity.
+func (cc *CountryCreate) AddBanks(b ...*Bank) *CountryCreate {
+	ids := make([]uint64, len(b))
+	for i := range b {
+		ids[i] = b[i].ID
+	}
+	return cc.AddBankIDs(ids...)
+}
+
+// AddUserIDs adds the "users" edge to the User entity by IDs.
+func (cc *CountryCreate) AddUserIDs(ids ...uint64) *CountryCreate {
+	cc.mutation.AddUserIDs(ids...)
+	return cc
+}
+
+// AddUsers adds the "users" edges to the User entity.
+func (cc *CountryCreate) AddUsers(u ...*User) *CountryCreate {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cc.AddUserIDs(ids...)
+}
+
+// AddContactUserIDs adds the "contact_users" edge to the User entity by IDs.
+func (cc *CountryCreate) AddContactUserIDs(ids ...uint64) *CountryCreate {
+	cc.mutation.AddContactUserIDs(ids...)
+	return cc
+}
+
+// AddContactUsers adds the "contact_users" edges to the User entity.
+func (cc *CountryCreate) AddContactUsers(u ...*User) *CountryCreate {
+	ids := make([]uint64, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return cc.AddContactUserIDs(ids...)
+}
+
 // Mutation returns the CountryMutation object of the builder.
 func (cc *CountryCreate) Mutation() *CountryMutation {
 	return cc.mutation
@@ -405,6 +452,54 @@ func (cc *CountryCreate) createSpec() (*Country, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(countrylocation.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.BanksIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.BanksTable,
+			Columns: []string{country.BanksColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(bank.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.UsersTable,
+			Columns: []string{country.UsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.ContactUsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   country.ContactUsersTable,
+			Columns: []string{country.ContactUsersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUint64),
 			},
 		}
 		for _, k := range nodes {

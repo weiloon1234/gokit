@@ -79,6 +79,12 @@ func (Country) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("locations", CountryLocation.Type).
 			Comment("Locations belonging to the country"),
+		edge.To("banks", Bank.Type).
+			Comment("Banks belonging to the country"),
+		edge.To("users", User.Type).
+			Comment("Users belonging to the country"),
+		edge.To("contact_users", User.Type).
+			Comment("Contact country Users belonging to the country"),
 	}
 }
 

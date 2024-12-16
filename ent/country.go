@@ -55,9 +55,15 @@ type Country struct {
 type CountryEdges struct {
 	// Locations belonging to the country
 	Locations []*CountryLocation `json:"locations,omitempty"`
+	// Banks belonging to the country
+	Banks []*Bank `json:"banks,omitempty"`
+	// Users belonging to the country
+	Users []*User `json:"users,omitempty"`
+	// Contact country Users belonging to the country
+	ContactUsers []*User `json:"contact_users,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [4]bool
 }
 
 // LocationsOrErr returns the Locations value or an error if the edge
@@ -67,6 +73,33 @@ func (e CountryEdges) LocationsOrErr() ([]*CountryLocation, error) {
 		return e.Locations, nil
 	}
 	return nil, &NotLoadedError{edge: "locations"}
+}
+
+// BanksOrErr returns the Banks value or an error if the edge
+// was not loaded in eager-loading.
+func (e CountryEdges) BanksOrErr() ([]*Bank, error) {
+	if e.loadedTypes[1] {
+		return e.Banks, nil
+	}
+	return nil, &NotLoadedError{edge: "banks"}
+}
+
+// UsersOrErr returns the Users value or an error if the edge
+// was not loaded in eager-loading.
+func (e CountryEdges) UsersOrErr() ([]*User, error) {
+	if e.loadedTypes[2] {
+		return e.Users, nil
+	}
+	return nil, &NotLoadedError{edge: "users"}
+}
+
+// ContactUsersOrErr returns the ContactUsers value or an error if the edge
+// was not loaded in eager-loading.
+func (e CountryEdges) ContactUsersOrErr() ([]*User, error) {
+	if e.loadedTypes[3] {
+		return e.ContactUsers, nil
+	}
+	return nil, &NotLoadedError{edge: "contact_users"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -210,6 +243,21 @@ func (c *Country) Value(name string) (ent.Value, error) {
 // QueryLocations queries the "locations" edge of the Country entity.
 func (c *Country) QueryLocations() *CountryLocationQuery {
 	return NewCountryClient(c.config).QueryLocations(c)
+}
+
+// QueryBanks queries the "banks" edge of the Country entity.
+func (c *Country) QueryBanks() *BankQuery {
+	return NewCountryClient(c.config).QueryBanks(c)
+}
+
+// QueryUsers queries the "users" edge of the Country entity.
+func (c *Country) QueryUsers() *UserQuery {
+	return NewCountryClient(c.config).QueryUsers(c)
+}
+
+// QueryContactUsers queries the "contact_users" edge of the Country entity.
+func (c *Country) QueryContactUsers() *UserQuery {
+	return NewCountryClient(c.config).QueryContactUsers(c)
 }
 
 // Update returns a builder for updating this Country.

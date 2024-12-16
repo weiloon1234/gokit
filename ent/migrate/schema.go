@@ -8,6 +8,71 @@ import (
 )
 
 var (
+	// AdminsColumns holds the columns for the "admins" table.
+	AdminsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint64, Increment: true},
+		{Name: "username", Type: field.TypeString, Nullable: true},
+		{Name: "name", Type: field.TypeString, Nullable: true},
+		{Name: "email", Type: field.TypeString, Nullable: true},
+		{Name: "email_verified_at", Type: field.TypeTime, Nullable: true},
+		{Name: "password", Type: field.TypeString},
+		{Name: "password2", Type: field.TypeString},
+		{Name: "lang", Type: field.TypeString, Default: "en"},
+		{Name: "avatar", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "type", Type: field.TypeUint8, Default: 0},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+	}
+	// AdminsTable holds the schema information for the "admins" table.
+	AdminsTable = &schema.Table{
+		Name:       "admins",
+		Columns:    AdminsColumns,
+		PrimaryKey: []*schema.Column{AdminsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "admin_username",
+				Unique:  false,
+				Columns: []*schema.Column{AdminsColumns[1]},
+			},
+			{
+				Name:    "admin_email",
+				Unique:  false,
+				Columns: []*schema.Column{AdminsColumns[3]},
+			},
+		},
+	}
+	// BanksColumns holds the columns for the "banks" table.
+	BanksColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint64, Increment: true},
+		{Name: "name_en", Type: field.TypeString},
+		{Name: "name_zh", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "country_id", Type: field.TypeUint64, Nullable: true},
+	}
+	// BanksTable holds the schema information for the "banks" table.
+	BanksTable = &schema.Table{
+		Name:       "banks",
+		Columns:    BanksColumns,
+		PrimaryKey: []*schema.Column{BanksColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "banks_countries_banks",
+				Columns:    []*schema.Column{BanksColumns[6]},
+				RefColumns: []*schema.Column{CountriesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "bank_country_id",
+				Unique:  false,
+				Columns: []*schema.Column{BanksColumns[6]},
+			},
+		},
+	}
 	// CountriesColumns holds the columns for the "countries" table.
 	CountriesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUint64, Increment: true},
@@ -98,14 +163,120 @@ var (
 			},
 		},
 	}
+	// UsersColumns holds the columns for the "users" table.
+	UsersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUint64, Increment: true},
+		{Name: "username", Type: field.TypeString, Nullable: true},
+		{Name: "name", Type: field.TypeString, Nullable: true},
+		{Name: "email", Type: field.TypeString, Nullable: true},
+		{Name: "email_verified_at", Type: field.TypeTime, Nullable: true},
+		{Name: "password", Type: field.TypeString},
+		{Name: "password2", Type: field.TypeString},
+		{Name: "contact_number", Type: field.TypeString, Nullable: true},
+		{Name: "full_contact_number", Type: field.TypeString, Nullable: true},
+		{Name: "lang", Type: field.TypeString, Default: "en"},
+		{Name: "avatar", Type: field.TypeString, Nullable: true, Size: 2147483647},
+		{Name: "credit_1", Type: field.TypeFloat64, Default: 0},
+		{Name: "credit_2", Type: field.TypeFloat64, Default: 0},
+		{Name: "credit_3", Type: field.TypeFloat64, Default: 0},
+		{Name: "credit_4", Type: field.TypeFloat64, Default: 0},
+		{Name: "credit_5", Type: field.TypeFloat64, Default: 0},
+		{Name: "bank_account_name", Type: field.TypeString, Nullable: true},
+		{Name: "bank_account_number", Type: field.TypeString, Nullable: true},
+		{Name: "national_id", Type: field.TypeString, Nullable: true},
+		{Name: "first_login", Type: field.TypeBool, Default: false},
+		{Name: "ban_until", Type: field.TypeTime, Nullable: true},
+		{Name: "new_login_at", Type: field.TypeTime, Nullable: true},
+		{Name: "last_login_at", Type: field.TypeTime, Nullable: true},
+		{Name: "unilevel", Type: field.TypeUint64, Nullable: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "deleted_at", Type: field.TypeTime, Nullable: true},
+		{Name: "bank_id", Type: field.TypeUint64, Nullable: true},
+		{Name: "country_id", Type: field.TypeUint64, Nullable: true},
+		{Name: "contact_country_id", Type: field.TypeUint64, Nullable: true},
+		{Name: "introducer_user_id", Type: field.TypeUint64, Nullable: true},
+	}
+	// UsersTable holds the schema information for the "users" table.
+	UsersTable = &schema.Table{
+		Name:       "users",
+		Columns:    UsersColumns,
+		PrimaryKey: []*schema.Column{UsersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "users_banks_users",
+				Columns:    []*schema.Column{UsersColumns[27]},
+				RefColumns: []*schema.Column{BanksColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "users_countries_users",
+				Columns:    []*schema.Column{UsersColumns[28]},
+				RefColumns: []*schema.Column{CountriesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "users_countries_contact_users",
+				Columns:    []*schema.Column{UsersColumns[29]},
+				RefColumns: []*schema.Column{CountriesColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "users_users_introduced_users",
+				Columns:    []*schema.Column{UsersColumns[30]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "user_username",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[1]},
+			},
+			{
+				Name:    "user_email",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[3]},
+			},
+			{
+				Name:    "user_country_id",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[28]},
+			},
+			{
+				Name:    "user_contact_country_id",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[29]},
+			},
+			{
+				Name:    "user_introducer_user_id",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[30]},
+			},
+			{
+				Name:    "user_bank_id",
+				Unique:  false,
+				Columns: []*schema.Column{UsersColumns[27]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AdminsTable,
+		BanksTable,
 		CountriesTable,
 		CountryLocationsTable,
+		UsersTable,
 	}
 )
 
 func init() {
+	BanksTable.ForeignKeys[0].RefTable = CountriesTable
 	CountryLocationsTable.ForeignKeys[0].RefTable = CountriesTable
 	CountryLocationsTable.ForeignKeys[1].RefTable = CountryLocationsTable
+	UsersTable.ForeignKeys[0].RefTable = BanksTable
+	UsersTable.ForeignKeys[1].RefTable = CountriesTable
+	UsersTable.ForeignKeys[2].RefTable = CountriesTable
+	UsersTable.ForeignKeys[3].RefTable = UsersTable
 }

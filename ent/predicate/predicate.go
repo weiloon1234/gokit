@@ -6,8 +6,17 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Admin is the predicate function for admin builders.
+type Admin func(*sql.Selector)
+
+// Bank is the predicate function for bank builders.
+type Bank func(*sql.Selector)
+
 // Country is the predicate function for country builders.
 type Country func(*sql.Selector)
 
 // CountryLocation is the predicate function for countrylocation builders.
 type CountryLocation func(*sql.Selector)
+
+// User is the predicate function for user builders.
+type User func(*sql.Selector)
