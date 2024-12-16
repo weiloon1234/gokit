@@ -1,8 +1,8 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -34,7 +34,7 @@ var SeederCmd = &cobra.Command{
 		seederFunc, found := seederRegistry[seederName]
 		if !found {
 			log.Errorf("Seeder '%s' not found. Available seeders: %v", seederName, availableSeeders())
-			return errors.New(fmt.Sprintf("Seeder '%s' not found. Available seeders: %v", seederName, availableSeeders()))
+			return fmt.Errorf("seeder '%s' not found; available seeders: %v", seederName, availableSeeders())
 		}
 
 		// Run the seeder function

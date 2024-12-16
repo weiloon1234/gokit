@@ -1,0 +1,39 @@
+name: Validate Ent Schema and Generate Code
+
+on:
+  push:
+    branches:
+      - main
+      - dev # Adjust this to your active branches
+  pull_request:
+
+jobs:
+  validate-ent:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the code
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Set up Go environment
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20 # Set to your Go version
+
+      # Install dependencies
+      - name: Install dependencies
+        run: |
+          go mod tidy
+
+      # Validate Ent schema and generate code
+      - name: Generate Ent Code
+        run: |
+          go run ent/generate.go
+
+      # Check if generated files are up-to-date
+      - name: Check for changes in Ent generated files
+        run: |
+          git diff --exit-code
+        # If changes are detected, the workflow fails

@@ -1,8 +1,9 @@
 package rules
 
 import (
-	"github.com/weiloon1234/gokit/utils"
 	"mime/multipart"
+
+	"github.com/weiloon1234/gokit/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,10 +17,5 @@ func File(value interface{}, params []string, c *gin.Context) bool {
 		return false
 	}
 
-	err := utils.ValidateFile(c, file)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return utils.ValidateFile(c, file) == nil
 }

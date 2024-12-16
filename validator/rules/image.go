@@ -1,9 +1,10 @@
 package rules
 
 import (
+	"mime/multipart"
+
 	"github.com/gin-gonic/gin"
 	"github.com/weiloon1234/gokit/utils"
-	"mime/multipart"
 )
 
 // Image checks if the value is an uploaded image file
@@ -16,9 +17,5 @@ func Image(value interface{}, params []string, c *gin.Context) bool {
 	}
 
 	err := utils.ValidateImage(c, file)
-	if err != nil {
-		return false
-	}
-
-	return true
+	return err == nil
 }

@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"time"
+
 	"github.com/go-redis/redis/v8"
 	"github.com/weiloon1234/gokit/config"
-	"time"
 )
 
-var client *redis.Client
+var redisClient *redis.Client
 var GlobalRedisConfig *config.RedisConfig
 
 func InitRedis(config *config.RedisConfig) error {
@@ -23,7 +24,7 @@ func InitRedis(config *config.RedisConfig) error {
 		}
 	}
 
-	client = redis.NewClient(&redis.Options{
+	redisClient = redis.NewClient(&redis.Options{
 		Addr:         fmt.Sprintf("%s:%s", config.Host, config.Port),
 		Password:     config.Password,
 		DB:           config.DB,
@@ -39,7 +40,7 @@ func InitRedis(config *config.RedisConfig) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := client.Ping(ctx).Result()
+	_, err := redisClient.Ping(ctx).Result()
 	if err != nil {
 		return err
 	}
@@ -55,6 +56,6 @@ func GetGlobalRedisConfig() *config.RedisConfig {
 	return GlobalRedisConfig
 }
 
-func GetClient() *redis.Client {
-	return client
+func GetRedisClient() *redis.Client {
+	return redisClient
 }
