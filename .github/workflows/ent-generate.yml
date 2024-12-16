@@ -30,7 +30,7 @@ jobs:
       # Validate Ent schema and generate code
       - name: Generate Ent Code
         run: |
-          go run ent/entc.go
+          go run ent/generate.go
 
       # Check if generated files are up-to-date
       - name: Check for changes in Ent generated files
