@@ -10,12 +10,14 @@ import (
 	"entgo.io/ent/dialect"
 
 	entSQL "entgo.io/ent/dialect/sql"
+	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/ent"
 	"github.com/weiloon1234/gokit/ent/hook"
 	"github.com/weiloon1234/gokit/ent/migrate"
+	"github.com/weiloon1234/gokit/logger"
 )
 
 var (
@@ -103,4 +105,34 @@ func CloseDB() error {
 
 	// Return combined errors or nil if no errors occurred
 	return errs
+}
+
+func WithTransaction(ctx *gin.Context, fn func(tx *ent.Tx) error) error {
+	// Start the transaction
+	tx, err := dbClient.Tx(ctx)
+	if err != nil {
+		return err // Return error if the transaction can't be started
+	}
+
+	// Defer rollback in case of panic or early return
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback() // Rollback transaction on panic
+			logger.GetLogger().Printf("Transaction rolled back due to panic: %v", r)
+		}
+	}()
+
+	// Run the transactional function
+	err = fn(tx)
+	if err != nil {
+		tx.Rollback() // Rollback transaction on error
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return err // Return error if commit fails
+	}
+
+	return nil
 }
