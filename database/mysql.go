@@ -64,7 +64,7 @@ func GetGlobalDBConfig() *config.DBConfig {
 	return GlobalDBConfig
 }
 
-// GetDBClient retrieves the Ent client.
+// GetDBClient returns the Ent client, ensuring the project schema is included.
 func GetDBClient() *ent.Client {
 	return dbClient
 }
