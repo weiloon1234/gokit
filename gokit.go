@@ -3,6 +3,7 @@ package gokit
 import (
 	"log"
 
+	"entgo.io/ent"
 	"github.com/gin-gonic/gin"
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/database"
@@ -25,7 +26,7 @@ type RedisConfig = config.RedisConfig
 type StorageConfig = config.StorageConfig
 type UploadConfig = config.UploadConfig
 
-func Init(config config.Config) {
+func Init(config config.Config, clientFactory func(driver ent.Driver) *ent.Client) {
 	config.BuildConfig()
 
 	// Configure logger
@@ -36,7 +37,7 @@ func Init(config config.Config) {
 	config.BuildApp()
 
 	if config.FeatureConfig.EnableDB {
-		if err := database.Init(&config.DBConfig); err != nil {
+		if err := database.Init(&config.DBConfig, clientFactory); err != nil {
 			log.Fatalf("Failed to initialize DB: %v", err)
 		}
 	}

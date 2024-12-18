@@ -26,10 +26,11 @@ var (
 )
 
 // Init initializes the Ent client and connects to the database.
-func Init(config *config.DBConfig) error {
+func Init(config *config.DBConfig, clientFactory func(driver ent.Driver) *ent.Client) error {
+	var err error
+
 	SetGlobalDBConfig(config)
 	// Open database connection
-	var err error
 	sqlDB, err = sql.Open("mysql", config.GetDSN())
 	if err != nil {
 		return fmt.Errorf("failed to open MySQL connection: %w", err)
@@ -45,8 +46,8 @@ func Init(config *config.DBConfig) error {
 	// Wrap the database connection with Ent's SQL driver
 	entDriver := entSQL.OpenDB(dialect.MySQL, sqlDB)
 
-	// Initialize the Ent client
-	dbClient = ent.NewClient(ent.Driver(entDriver))
+	// Initialize the ent client using the clientFactory
+	dbClient = clientFactory(entDriver) // Initialize the ent client using the clientFactory
 
 	// Add the soft-delete filter
 	hook.AddSoftDeleteFilter(dbClient)
