@@ -6,7 +6,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/database"
-	"github.com/weiloon1234/gokit/ent"
 	"github.com/weiloon1234/gokit/localization"
 	"github.com/weiloon1234/gokit/logger"
 	"github.com/weiloon1234/gokit/middleware"
@@ -26,7 +25,7 @@ type RedisConfig = config.RedisConfig
 type StorageConfig = config.StorageConfig
 type UploadConfig = config.UploadConfig
 
-func Init(config config.Config, clientFactory func(driver ent.Driver) *ent.Client) {
+func Init(config config.Config) {
 	config.BuildConfig()
 
 	// Configure logger
@@ -37,7 +36,7 @@ func Init(config config.Config, clientFactory func(driver ent.Driver) *ent.Clien
 	config.BuildApp()
 
 	if config.FeatureConfig.EnableDB {
-		if err := database.Init(&config.DBConfig, clientFactory); err != nil {
+		if err := database.Init(&config.DBConfig); err != nil {
 			log.Fatalf("Failed to initialize DB: %v", err)
 		}
 	}

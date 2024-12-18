@@ -7,12 +7,16 @@ import (
 
 	"time"
 
-	"entgo.io/ent"
+	"entgo.io/ent/dialect"
+
 	entSQL "entgo.io/ent/dialect/sql"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
 	"github.com/weiloon1234/gokit/config"
+	"github.com/weiloon1234/gokit/ent"
+	"github.com/weiloon1234/gokit/ent/hook"
+	"github.com/weiloon1234/gokit/ent/migrate"
 	"github.com/weiloon1234/gokit/logger"
 )
 
@@ -23,10 +27,10 @@ var (
 )
 
 // Init initializes the Ent client and connects to the database.
-func Init(config *config.DBConfig, clientFactory func(driver ent.Driver) *ent.Client) error {
+func Init(config *config.DBConfig) error {
+	SetGlobalDBConfig(config)
+	// Open database connection
 	var err error
-
-	// Open the database connection
 	sqlDB, err = sql.Open("mysql", config.GetDSN())
 	if err != nil {
 		return fmt.Errorf("failed to open MySQL connection: %w", err)
@@ -39,13 +43,25 @@ func Init(config *config.DBConfig, clientFactory func(driver ent.Driver) *ent.Cl
 		return fmt.Errorf("failed to connect to MySQL: %w", err)
 	}
 
-	// Wrap the database connection with Ent's driver
-	entDriver := entSQL.OpenDB(entSQL.Dialect.MySQL, sqlDB)
+	// Wrap the database connection with Ent's SQL driver
+	entDriver := entSQL.OpenDB(dialect.MySQL, sqlDB)
 
-	dbClient = clientFactory(entDriver)
-	if dbClient == nil {
-		return fmt.Errorf("failed to initialize ent client; clientFactory returned nil")
+	// Initialize the Ent client
+	dbClient = ent.NewClient(ent.Driver(entDriver))
+
+	// Run the schema migration with context timeout
+	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelMigration()
+	if err := dbClient.Schema.Create(
+		migrationCtx,
+		migrate.WithDropColumn(true),
+		migrate.WithDropIndex(true),
+	); err != nil {
+		return fmt.Errorf("failed to create schema resources: %w", err)
 	}
+
+	// Add the soft-delete filter
+	hook.AddSoftDeleteFilter(dbClient)
 
 	return nil
 }
