@@ -16,7 +16,6 @@ import (
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/ent"
 	"github.com/weiloon1234/gokit/ent/hook"
-	"github.com/weiloon1234/gokit/ent/migrate"
 	"github.com/weiloon1234/gokit/logger"
 )
 
@@ -48,17 +47,6 @@ func Init(config *config.DBConfig) error {
 
 	// Initialize the Ent client
 	dbClient = ent.NewClient(ent.Driver(entDriver))
-
-	// Run the schema migration with context timeout
-	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancelMigration()
-	if err := dbClient.Schema.Create(
-		migrationCtx,
-		migrate.WithDropColumn(true),
-		migrate.WithDropIndex(true),
-	); err != nil {
-		return fmt.Errorf("failed to create schema resources: %w", err)
-	}
 
 	// Add the soft-delete filter
 	hook.AddSoftDeleteFilter(dbClient)
