@@ -50,6 +50,9 @@ func InitEntity(entClient interface{}, migrationOptions ...interface{}) error {
 		return fmt.Errorf("entClient must be a non-nil pointer")
 	}
 
+	// Log schema being used
+	fmt.Printf("Using schema: %v\n", clientVal.Type())
+
 	// Store the initialized client
 	dbClient = entClient
 
@@ -60,6 +63,7 @@ func InitEntity(entClient interface{}, migrationOptions ...interface{}) error {
 	}
 
 	schema := schemaMethod.Call(nil)[0] // Retrieve the schema object
+	fmt.Printf("Schema object: %v\n", schema.Type())
 	createMethod := schema.MethodByName("Create")
 	if !createMethod.IsValid() {
 		return fmt.Errorf("schema object does not have a 'Create' method")
