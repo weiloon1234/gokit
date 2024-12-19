@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	entSQL "entgo.io/ent/dialect/sql"
+	sqlSchema "entgo.io/ent/dialect/sql/schema"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
 	"github.com/weiloon1234/gokit-base-entity/ent/hook"
@@ -74,24 +75,19 @@ func Init(config *config.DBConfig, entClient interface{}, migrate interface{}) e
 		return fmt.Errorf("schema object does not have a 'Create' method")
 	}
 
-	// Call migration with options from the passed `migrate` object
-	migrateVal := reflect.ValueOf(migrate)
-	withDropColumn := migrateVal.MethodByName("WithDropColumn")
-	withDropIndex := migrateVal.MethodByName("WithDropIndex")
-	if !withDropColumn.IsValid() || !withDropIndex.IsValid() {
-		return fmt.Errorf("migrate object does not have the required methods")
+	// Access WithDropColumn and WithDropIndex from the migrate package
+	withDropColumn, ok1 := reflect.ValueOf(migrate).Elem().FieldByName("WithDropColumn").Interface().(sqlSchema.MigrateOption)
+	withDropIndex, ok2 := reflect.ValueOf(migrate).Elem().FieldByName("WithDropIndex").Interface().(sqlSchema.MigrateOption)
+	if !ok1 || !ok2 {
+		return fmt.Errorf("migrate object does not provide the required options")
 	}
-
-	// Get migration options
-	dropColumnOption := withDropColumn.Call([]reflect.Value{reflect.ValueOf(true)})[0]
-	dropIndexOption := withDropIndex.Call([]reflect.Value{reflect.ValueOf(true)})[0]
 
 	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelMigration()
 	createResults := createMethod.Call([]reflect.Value{
 		reflect.ValueOf(migrationCtx),
-		dropColumnOption,
-		dropIndexOption,
+		reflect.ValueOf(withDropColumn),
+		reflect.ValueOf(withDropIndex),
 	})
 
 	if len(createResults) > 0 && !createResults[0].IsNil() {
