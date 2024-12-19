@@ -12,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	entSQL "entgo.io/ent/dialect/sql"
-	sqlSchema "entgo.io/ent/dialect/sql/schema"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
 	"github.com/weiloon1234/gokit-base-entity/ent/hook"
@@ -27,7 +26,7 @@ var (
 )
 
 // Init initializes the Ent client and connects to the database.
-func Init(config *config.DBConfig, entClient interface{}, migrate interface{}) error {
+func Init(config *config.DBConfig, entClient interface{}) error {
 	SetGlobalDBConfig(config)
 	// Open database connection
 	var err error
@@ -75,19 +74,12 @@ func Init(config *config.DBConfig, entClient interface{}, migrate interface{}) e
 		return fmt.Errorf("schema object does not have a 'Create' method")
 	}
 
-	// Access WithDropColumn and WithDropIndex from the migrate package
-	withDropColumn, ok1 := reflect.ValueOf(migrate).Elem().FieldByName("WithDropColumn").Interface().(sqlSchema.MigrateOption)
-	withDropIndex, ok2 := reflect.ValueOf(migrate).Elem().FieldByName("WithDropIndex").Interface().(sqlSchema.MigrateOption)
-	if !ok1 || !ok2 {
-		return fmt.Errorf("migrate object does not provide the required options")
-	}
-
 	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelMigration()
 	createResults := createMethod.Call([]reflect.Value{
 		reflect.ValueOf(migrationCtx),
-		reflect.ValueOf(withDropColumn),
-		reflect.ValueOf(withDropIndex),
+		reflect.ValueOf(true),
+		reflect.ValueOf(true),
 	})
 
 	if len(createResults) > 0 && !createResults[0].IsNil() {
