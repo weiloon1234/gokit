@@ -51,6 +51,10 @@ func Init(config *config.DBConfig, entClient interface{}) error {
 		return fmt.Errorf("entClient must be a non-nil pointer")
 	}
 
+	for i := 0; i < clientVal.NumMethod(); i++ {
+		fmt.Printf("Method[%d]: %s\n", i, clientVal.Type().Method(i).Name)
+	}
+
 	driverMethod := clientVal.MethodByName("Driver")
 	if !driverMethod.IsValid() {
 		return fmt.Errorf("entClient does not have a 'Driver' method")
