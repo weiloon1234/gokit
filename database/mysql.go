@@ -44,39 +44,45 @@ func Init(config *config.DBConfig) error {
 }
 
 func InitEntity(entClient interface{}, migrationOptions ...interface{}) error {
-	fmt.Printf("entClient type: %v\n", reflect.TypeOf(entClient))
+	clientVal := reflect.ValueOf(entClient)
+	clientType := reflect.TypeOf(entClient)
 
-	for i := 0; i < reflect.TypeOf(entClient).NumMethod(); i++ {
-		method := reflect.TypeOf(entClient).Method(i)
+	// Ensure the client is a pointer
+	if clientVal.Kind() != reflect.Ptr || clientVal.IsNil() {
+		return fmt.Errorf("entClient must be a non-nil pointer, got: %v", clientType)
+	}
+
+	fmt.Printf("entClient type: %v\n", clientType)
+
+	// List available methods for debugging
+	fmt.Println("Available methods on ent.Client:")
+	for i := 0; i < clientType.NumMethod(); i++ {
+		method := clientType.Method(i)
 		fmt.Printf("Method[%d]: %s\n", i, method.Name)
 	}
 
-	// Use reflection to initialize the Ent client
-	clientVal := reflect.ValueOf(entClient)
-	if clientVal.Kind() != reflect.Ptr || clientVal.IsNil() {
-		return fmt.Errorf("entClient must be a non-nil pointer")
-	}
-
-	// Log schema being used
-	fmt.Printf("Using schema: %v\n", clientVal.Type())
-
-	// Store the initialized client
-	dbClient = entClient
-
-	// Run the schema migration using reflection
+	// Use the pointer to call the Schema method
 	schemaMethod := clientVal.MethodByName("Schema")
 	if !schemaMethod.IsValid() {
 		return fmt.Errorf("entClient does not have a 'Schema' method")
 	}
 
-	schema := schemaMethod.Call(nil)[0] // Retrieve the schema object
+	// Call the Schema method and retrieve the result
+	schemaResults := schemaMethod.Call(nil)
+	if len(schemaResults) == 0 || schemaResults[0].IsNil() {
+		return fmt.Errorf("schema method returned nil or no results")
+	}
+
+	schema := schemaResults[0]
 	fmt.Printf("Schema object: %v\n", schema.Type())
+
+	// Use the Schema object to invoke the Create method
 	createMethod := schema.MethodByName("Create")
 	if !createMethod.IsValid() {
 		return fmt.Errorf("schema object does not have a 'Create' method")
 	}
 
-	// Call migration with options from the passed `migrate` object
+	// Prepare migration arguments
 	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelMigration()
 
@@ -86,10 +92,13 @@ func InitEntity(entClient interface{}, migrationOptions ...interface{}) error {
 	}
 
 	createResults := createMethod.Call(args)
-
 	if len(createResults) > 0 && !createResults[0].IsNil() {
 		return fmt.Errorf("failed to create schema resources: %w", createResults[0].Interface().(error))
 	}
+
+	dbClient = entClient
+
+	fmt.Println("Migration completed successfully.")
 
 	// Add the soft-delete filter
 	if err := hook.AddSoftDeleteFilter(dbClient); err != nil {
