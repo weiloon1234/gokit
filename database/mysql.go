@@ -44,6 +44,13 @@ func Init(config *config.DBConfig) error {
 }
 
 func InitEntity(entClient interface{}, migrationOptions ...interface{}) error {
+	fmt.Printf("entClient type: %v\n", reflect.TypeOf(entClient))
+
+	for i := 0; i < reflect.TypeOf(entClient).NumMethod(); i++ {
+		method := reflect.TypeOf(entClient).Method(i)
+		fmt.Printf("Method[%d]: %s\n", i, method.Name)
+	}
+
 	// Use reflection to initialize the Ent client
 	clientVal := reflect.ValueOf(entClient)
 	if clientVal.Kind() != reflect.Ptr || clientVal.IsNil() {
