@@ -26,7 +26,7 @@ var (
 )
 
 // Init initializes the Ent client and connects to the database.
-func Init(config *config.DBConfig, entClient interface{}) error {
+func Init(config *config.DBConfig, entPackage interface{}) error {
 	SetGlobalDBConfig(config)
 	// Open database connection
 	var err error
@@ -42,40 +42,41 @@ func Init(config *config.DBConfig, entClient interface{}) error {
 		return fmt.Errorf("failed to connect to MySQL: %w", err)
 	}
 
+	// Validate that the entPackage contains the expected components
+	entVal := reflect.ValueOf(entPackage)
+	clientField := entVal.FieldByName("NewClient")
+	if !clientField.IsValid() {
+		return fmt.Errorf("entPackage does not have a 'NewClient' function")
+	}
+
+	// Call the NewClient function to create the ent.Client
+	newClientFunc := clientField.Interface().(func() interface{})
+	dbClient = newClientFunc()
+
 	// Wrap the database connection with Ent's SQL driver
 	entDriver := entSQL.OpenDB(dialect.MySQL, sqlDB)
 
-	// Use reflection to initialize the Ent client
-	clientVal := reflect.ValueOf(entClient)
-	if clientVal.Kind() != reflect.Ptr || clientVal.IsNil() {
-		return fmt.Errorf("entClient must be a non-nil pointer")
-	}
-
-	for i := 0; i < clientVal.NumMethod(); i++ {
-		fmt.Printf("Method[%d]: %s\n", i, clientVal.Type().Method(i).Name)
-	}
-
+	// Use reflection to set the driver on the ent.Client
+	clientVal := reflect.ValueOf(dbClient)
 	driverMethod := clientVal.MethodByName("Driver")
 	if !driverMethod.IsValid() {
 		return fmt.Errorf("entClient does not have a 'Driver' method")
 	}
 
-	// Call the 'Driver' method to initialize the client
 	driverMethod.Call([]reflect.Value{reflect.ValueOf(entDriver)})
 
-	// Store the initialized client
-	dbClient = entClient
-
-	// Run the schema migration using reflection
-	schemaMethod := clientVal.MethodByName("Schema")
-	if !schemaMethod.IsValid() {
-		return fmt.Errorf("entClient does not have a 'Schema' method")
+	// Run schema migrations (if Schema exists)
+	schemaField := entVal.FieldByName("Schema")
+	if !schemaField.IsValid() {
+		return fmt.Errorf("entPackage does not have a 'Schema' function")
 	}
 
-	schema := schemaMethod.Call(nil)[0] // Retrieve the schema object
+	schemaVal := schemaField.Interface()
+	schema := reflect.ValueOf(schemaVal)
+
 	createMethod := schema.MethodByName("Create")
 	if !createMethod.IsValid() {
-		return fmt.Errorf("schema object does not have a 'Create' method")
+		return fmt.Errorf("entClient does not have a 'Create' method")
 	}
 
 	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
