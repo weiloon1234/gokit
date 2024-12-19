@@ -12,14 +12,13 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
-	"github.com/weiloon1234/gokit-base-entity/ent/hook"
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/logger"
 )
 
 var (
-	dbClient       interface{}
-	sqlDB          *sql.DB // Save the raw database connection for later management
+	sqlDB          *sql.DB      // Save the raw database connection for later management
+	entClient      *interface{} // Use an interface to avoid direct dependency on the ent package
 	GlobalDBConfig *config.DBConfig
 )
 
@@ -43,51 +42,6 @@ func Init(config *config.DBConfig) error {
 	return nil
 }
 
-func InitEntity(entClient interface{}, migrationOptions ...interface{}) error {
-	clientVal := reflect.ValueOf(entClient)
-
-	if clientVal.Kind() != reflect.Ptr || clientVal.IsNil() {
-		return fmt.Errorf("entClient must be a non-nil pointer, got: %v", reflect.TypeOf(entClient))
-	}
-
-	// Dynamically invoke the Schema.Create method
-	schemaMethod := clientVal.MethodByName("Schema")
-	if !schemaMethod.IsValid() {
-		return fmt.Errorf("entClient does not have a 'Schema' method")
-	}
-
-	schema := schemaMethod.Call(nil)[0]
-	createMethod := schema.MethodByName("Create")
-	if !createMethod.IsValid() {
-		return fmt.Errorf("schema object does not have a 'Create' method")
-	}
-
-	// Prepare migration arguments
-	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancelMigration()
-
-	args := []reflect.Value{reflect.ValueOf(migrationCtx)}
-	for _, opt := range migrationOptions {
-		args = append(args, reflect.ValueOf(opt))
-	}
-
-	createResults := createMethod.Call(args)
-	if len(createResults) > 0 && !createResults[0].IsNil() {
-		return fmt.Errorf("failed to create schema resources: %w", createResults[0].Interface().(error))
-	}
-
-	dbClient = entClient
-
-	fmt.Println("Migration completed successfully.")
-
-	// Add the soft-delete filter
-	if err := hook.AddSoftDeleteFilter(dbClient); err != nil {
-		return fmt.Errorf("failed to add soft-delete filter: %w", err)
-	}
-
-	return nil
-}
-
 // SetGlobalDBConfig sets the global database configuration.
 func SetGlobalDBConfig(config *config.DBConfig) {
 	GlobalDBConfig = config
@@ -102,13 +56,19 @@ func GetSQLDB() *sql.DB {
 	return sqlDB
 }
 
-// GetDBClient retrieves the Ent client as an interface{}.
-func GetDBClient() interface{} {
-	return dbClient
+func SetEntClient(client interface{}) {
+	entClient = &client
+}
+
+func GetEntClient() interface{} {
+	if entClient == nil {
+		return nil // Return nil if the client hasn't been set
+	}
+	return *entClient
 }
 
 func WithTransaction(ctx *gin.Context, fn func(tx interface{}) error) error {
-	clientVal := reflect.ValueOf(dbClient)
+	clientVal := reflect.ValueOf(GetEntClient())
 	txMethod := clientVal.MethodByName("Tx")
 	if !txMethod.IsValid() {
 		return fmt.Errorf("dbClient does not have a 'Tx' method")
