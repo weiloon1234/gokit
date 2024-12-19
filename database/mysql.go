@@ -5,20 +5,28 @@ import (
 	"database/sql"
 	"fmt"
 
+	"reflect"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"github.com/gin-gonic/gin"
+
+	entSQL "entgo.io/ent/dialect/sql"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
+	"github.com/weiloon1234/gokit-base-entity/ent/hook"
 	"github.com/weiloon1234/gokit/config"
+	"github.com/weiloon1234/gokit/logger"
 )
 
 var (
+	dbClient       interface{}
 	sqlDB          *sql.DB // Save the raw database connection for later management
 	GlobalDBConfig *config.DBConfig
 )
 
 // Init initializes the Ent client and connects to the database.
-func Init(config *config.DBConfig) error {
+func Init(config *config.DBConfig, entClient interface{}, migrate interface{}) error {
 	SetGlobalDBConfig(config)
 	// Open database connection
 	var err error
@@ -32,6 +40,67 @@ func Init(config *config.DBConfig) error {
 	defer cancel()
 	if err := sqlDB.PingContext(ctx); err != nil {
 		return fmt.Errorf("failed to connect to MySQL: %w", err)
+	}
+
+	// Wrap the database connection with Ent's SQL driver
+	entDriver := entSQL.OpenDB(dialect.MySQL, sqlDB)
+
+	// Use reflection to initialize the Ent client
+	clientVal := reflect.ValueOf(entClient)
+	if clientVal.Kind() != reflect.Ptr || clientVal.IsNil() {
+		return fmt.Errorf("entClient must be a non-nil pointer")
+	}
+
+	driverMethod := clientVal.MethodByName("Driver")
+	if !driverMethod.IsValid() {
+		return fmt.Errorf("entClient does not have a 'Driver' method")
+	}
+
+	// Call the 'Driver' method to initialize the client
+	driverMethod.Call([]reflect.Value{reflect.ValueOf(entDriver)})
+
+	// Store the initialized client
+	dbClient = entClient
+
+	// Run the schema migration using reflection
+	schemaMethod := clientVal.MethodByName("Schema")
+	if !schemaMethod.IsValid() {
+		return fmt.Errorf("entClient does not have a 'Schema' method")
+	}
+
+	schema := schemaMethod.Call(nil)[0] // Retrieve the schema object
+	createMethod := schema.MethodByName("Create")
+	if !createMethod.IsValid() {
+		return fmt.Errorf("schema object does not have a 'Create' method")
+	}
+
+	// Call migration with options from the passed `migrate` object
+	migrateVal := reflect.ValueOf(migrate)
+	withDropColumn := migrateVal.MethodByName("WithDropColumn")
+	withDropIndex := migrateVal.MethodByName("WithDropIndex")
+	if !withDropColumn.IsValid() || !withDropIndex.IsValid() {
+		return fmt.Errorf("migrate object does not have the required methods")
+	}
+
+	// Get migration options
+	dropColumnOption := withDropColumn.Call([]reflect.Value{reflect.ValueOf(true)})[0]
+	dropIndexOption := withDropIndex.Call([]reflect.Value{reflect.ValueOf(true)})[0]
+
+	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelMigration()
+	createResults := createMethod.Call([]reflect.Value{
+		reflect.ValueOf(migrationCtx),
+		dropColumnOption,
+		dropIndexOption,
+	})
+
+	if len(createResults) > 0 && !createResults[0].IsNil() {
+		return fmt.Errorf("failed to create schema resources: %w", createResults[0].Interface().(error))
+	}
+
+	// Add the soft-delete filter
+	if err := hook.AddSoftDeleteFilter(dbClient); err != nil {
+		return fmt.Errorf("failed to add soft-delete filter: %w", err)
 	}
 
 	return nil
@@ -49,6 +118,49 @@ func GetGlobalDBConfig() *config.DBConfig {
 
 func GetSQLDB() *sql.DB {
 	return sqlDB
+}
+
+// GetDBClient retrieves the Ent client as an interface{}.
+func GetDBClient() interface{} {
+	return dbClient
+}
+
+func WithTransaction(ctx *gin.Context, fn func(tx interface{}) error) error {
+	clientVal := reflect.ValueOf(dbClient)
+	txMethod := clientVal.MethodByName("Tx")
+	if !txMethod.IsValid() {
+		return fmt.Errorf("dbClient does not have a 'Tx' method")
+	}
+
+	// Start the transaction
+	txResults := txMethod.Call([]reflect.Value{reflect.ValueOf(ctx)})
+	if len(txResults) == 0 || txResults[0].IsNil() {
+		return fmt.Errorf("failed to start transaction")
+	}
+	tx := txResults[0]
+
+	// Defer rollback in case of panic or early return
+	defer func() {
+		if r := recover(); r != nil {
+			tx.MethodByName("Rollback").Call(nil)
+			logger.GetLogger().Printf("Transaction rolled back due to panic: %v", r)
+		}
+	}()
+
+	// Run the transactional function
+	err := fn(tx.Interface())
+	if err != nil {
+		tx.MethodByName("Rollback").Call(nil)
+		return err
+	}
+
+	// Commit the transaction
+	commitResults := tx.MethodByName("Commit").Call(nil)
+	if len(commitResults) > 0 && !commitResults[0].IsNil() {
+		return commitResults[0].Interface().(error)
+	}
+
+	return nil
 }
 
 // CloseDB safely closes the database connection and the Ent client.
