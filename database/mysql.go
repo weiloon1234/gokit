@@ -7,21 +7,12 @@ import (
 
 	"time"
 
-	"entgo.io/ent/dialect"
-
-	entSQL "entgo.io/ent/dialect/sql"
-	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
 	"github.com/weiloon1234/gokit/config"
-	"github.com/weiloon1234/gokit/ent"
-	"github.com/weiloon1234/gokit/ent/hook"
-	"github.com/weiloon1234/gokit/ent/migrate"
-	"github.com/weiloon1234/gokit/logger"
 )
 
 var (
-	dbClient       *ent.Client
 	sqlDB          *sql.DB // Save the raw database connection for later management
 	GlobalDBConfig *config.DBConfig
 )
@@ -43,26 +34,6 @@ func Init(config *config.DBConfig) error {
 		return fmt.Errorf("failed to connect to MySQL: %w", err)
 	}
 
-	// Wrap the database connection with Ent's SQL driver
-	entDriver := entSQL.OpenDB(dialect.MySQL, sqlDB)
-
-	// Initialize the Ent client
-	dbClient = ent.NewClient(ent.Driver(entDriver))
-
-	// Run the schema migration with context timeout
-	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
-	defer cancelMigration()
-	if err := dbClient.Schema.Create(
-		migrationCtx,
-		migrate.WithDropColumn(true),
-		migrate.WithDropIndex(true),
-	); err != nil {
-		return fmt.Errorf("failed to create schema resources: %w", err)
-	}
-
-	// Add the soft-delete filter
-	hook.AddSoftDeleteFilter(dbClient)
-
 	return nil
 }
 
@@ -76,11 +47,6 @@ func GetGlobalDBConfig() *config.DBConfig {
 	return GlobalDBConfig
 }
 
-// GetDBClient retrieves the Ent client.
-func GetDBClient() *ent.Client {
-	return dbClient
-}
-
 func GetSQLDB() *sql.DB {
 	return sqlDB
 }
@@ -88,13 +54,6 @@ func GetSQLDB() *sql.DB {
 // CloseDB safely closes the database connection and the Ent client.
 func CloseDB() error {
 	var errs error
-
-	// Close Ent client
-	if dbClient != nil {
-		if err := dbClient.Close(); err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("failed to close Ent client: %w", err))
-		}
-	}
 
 	// Close raw SQL connection
 	if sqlDB != nil {
@@ -105,34 +64,4 @@ func CloseDB() error {
 
 	// Return combined errors or nil if no errors occurred
 	return errs
-}
-
-func WithTransaction(ctx *gin.Context, fn func(tx *ent.Tx) error) error {
-	// Start the transaction
-	tx, err := dbClient.Tx(ctx)
-	if err != nil {
-		return err // Return error if the transaction can't be started
-	}
-
-	// Defer rollback in case of panic or early return
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback() // Rollback transaction on panic
-			logger.GetLogger().Printf("Transaction rolled back due to panic: %v", r)
-		}
-	}()
-
-	// Run the transactional function
-	err = fn(tx)
-	if err != nil {
-		tx.Rollback() // Rollback transaction on error
-		return err
-	}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return err // Return error if commit fails
-	}
-
-	return nil
 }
