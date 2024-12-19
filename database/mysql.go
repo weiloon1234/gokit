@@ -45,38 +45,18 @@ func Init(config *config.DBConfig) error {
 
 func InitEntity(entClient interface{}, migrationOptions ...interface{}) error {
 	clientVal := reflect.ValueOf(entClient)
-	clientType := reflect.TypeOf(entClient)
 
-	// Ensure the client is a pointer
 	if clientVal.Kind() != reflect.Ptr || clientVal.IsNil() {
-		return fmt.Errorf("entClient must be a non-nil pointer, got: %v", clientType)
+		return fmt.Errorf("entClient must be a non-nil pointer, got: %v", reflect.TypeOf(entClient))
 	}
 
-	fmt.Printf("entClient type: %v\n", clientType)
-
-	// List available methods for debugging
-	fmt.Println("Available methods on ent.Client:")
-	for i := 0; i < clientType.NumMethod(); i++ {
-		method := clientType.Method(i)
-		fmt.Printf("Method[%d]: %s\n", i, method.Name)
-	}
-
-	// Use the pointer to call the Schema method
+	// Dynamically invoke the Schema.Create method
 	schemaMethod := clientVal.MethodByName("Schema")
 	if !schemaMethod.IsValid() {
 		return fmt.Errorf("entClient does not have a 'Schema' method")
 	}
 
-	// Call the Schema method and retrieve the result
-	schemaResults := schemaMethod.Call(nil)
-	if len(schemaResults) == 0 || schemaResults[0].IsNil() {
-		return fmt.Errorf("schema method returned nil or no results")
-	}
-
-	schema := schemaResults[0]
-	fmt.Printf("Schema object: %v\n", schema.Type())
-
-	// Use the Schema object to invoke the Create method
+	schema := schemaMethod.Call(nil)[0]
 	createMethod := schema.MethodByName("Create")
 	if !createMethod.IsValid() {
 		return fmt.Errorf("schema object does not have a 'Create' method")
