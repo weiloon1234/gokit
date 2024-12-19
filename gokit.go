@@ -25,7 +25,7 @@ type RedisConfig = config.RedisConfig
 type StorageConfig = config.StorageConfig
 type UploadConfig = config.UploadConfig
 
-func Init(config config.Config, entPackage interface{}) {
+func Init(config config.Config) {
 	config.BuildConfig()
 
 	// Configure logger
@@ -36,7 +36,7 @@ func Init(config config.Config, entPackage interface{}) {
 	config.BuildApp()
 
 	if config.FeatureConfig.EnableDB {
-		if err := database.Init(&config.DBConfig, entPackage); err != nil {
+		if err := database.Init(&config.DBConfig); err != nil {
 			log.Fatalf("Failed to initialize DB: %v", err)
 		}
 	}
