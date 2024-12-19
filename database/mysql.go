@@ -60,9 +60,9 @@ func GetSQLDB() *sql.DB {
 func SetEntClient(client interface{}) error {
 	entClient = &client
 
-	// Apply soft-delete hook
-	if err := hook.AddSoftDeleteFilter(client); err != nil {
-		return fmt.Errorf("Failed to add soft-delete filter: %v", err)
+	// Add the soft-delete filter
+	if err := hook.AddSoftDeleteFilter(entClient); err != nil {
+		return fmt.Errorf("failed to add soft-delete filter: %w", err)
 	}
 
 	return nil
