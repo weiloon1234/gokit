@@ -43,7 +43,7 @@ func Init(config *config.DBConfig) error {
 	return nil
 }
 
-func InitEntity(entClient interface{}) error {
+func InitEntity(entClient interface{}, migrationOptions ...interface{}) error {
 	// Use reflection to initialize the Ent client
 	clientVal := reflect.ValueOf(entClient)
 	if clientVal.Kind() != reflect.Ptr || clientVal.IsNil() {
@@ -69,11 +69,12 @@ func InitEntity(entClient interface{}) error {
 	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelMigration()
 
-	createResults := createMethod.Call([]reflect.Value{
-		reflect.ValueOf(migrationCtx),
-		// dropColumnOption,
-		// dropIndexOption,
-	})
+	args := []reflect.Value{reflect.ValueOf(migrationCtx)}
+	for _, opt := range migrationOptions {
+		args = append(args, reflect.ValueOf(opt))
+	}
+
+	createResults := createMethod.Call(args)
 
 	if len(createResults) > 0 && !createResults[0].IsNil() {
 		return fmt.Errorf("failed to create schema resources: %w", createResults[0].Interface().(error))
