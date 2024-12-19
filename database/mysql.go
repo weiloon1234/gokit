@@ -12,7 +12,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-multierror"
-	"github.com/weiloon1234/gokit-base-entity/ent/hook"
 	"github.com/weiloon1234/gokit/config"
 	"github.com/weiloon1234/gokit/logger"
 )
@@ -57,15 +56,8 @@ func GetSQLDB() *sql.DB {
 	return sqlDB
 }
 
-func SetEntClient(client interface{}) error {
+func SetEntClient(client interface{}) {
 	entClient = &client
-
-	// Add the soft-delete filter
-	if err := hook.AddSoftDeleteFilter(entClient); err != nil {
-		return fmt.Errorf("failed to add soft-delete filter: %w", err)
-	}
-
-	return nil
 }
 
 func GetEntClient() interface{} {

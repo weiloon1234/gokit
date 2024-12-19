@@ -8,7 +8,7 @@ import (
 )
 
 var CopyEntityCmd = &cobra.Command{
-	Use:   "copy-base-entity",
+	Use:   "copy-ent",
 	Short: "Copy base schemas to your project",
 	Run:   runCopyBaseEntity,
 }

@@ -9,4 +9,5 @@ func InitCommands(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(MigrateCmd)
 	rootCmd.AddCommand(SeederCmd)
 	rootCmd.AddCommand(CopyEntityCmd)
+	rootCmd.AddCommand(CopyEntityHookCmd)
 }
