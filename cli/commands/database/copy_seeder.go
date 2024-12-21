@@ -182,6 +182,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		}
 
 		fmt.Printf("======================\n")
+		fmt.Printf("If undefined goKitCommand please import goKitCommand \"github.com/weiloon1234/gokit/cli/commands\"")
 		fmt.Printf("Remember to rebuild entity after copying hooks.\n")
 	} else {
 		fmt.Printf("======================\n")
