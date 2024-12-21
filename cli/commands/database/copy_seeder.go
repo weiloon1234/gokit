@@ -159,26 +159,30 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 					continue
 				}
 
-				if strings.Contains(originalContent, stringToSearchAndAppend) {
-					// Find the indentation before the stringToSearchAndAppend
-					lines := strings.Split(originalContent, "\n")
-					var indent string
-					for _, line := range lines {
-						if strings.Contains(line, stringToSearchAndAppend) {
-							indent = line[:strings.Index(line, stringToSearchAndAppend)]
-							break
+				if strings.Contains(originalContent, registerLine) {
+					continue
+				} else {
+					if strings.Contains(originalContent, stringToSearchAndAppend) {
+						// Find the indentation before the stringToSearchAndAppend
+						lines := strings.Split(originalContent, "\n")
+						var indent string
+						for _, line := range lines {
+							if strings.Contains(line, stringToSearchAndAppend) {
+								indent = line[:strings.Index(line, stringToSearchAndAppend)]
+								break
+							}
 						}
-					}
 
-					updatedContent := strings.Replace(originalContent, stringToSearchAndAppend, stringToSearchAndAppend+"\n"+indent+registerLine+"\n", 1)
-					if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
-						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+						updatedContent := strings.Replace(originalContent, stringToSearchAndAppend, stringToSearchAndAppend+"\n"+indent+registerLine, 1)
+						if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
+							failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+							continue
+						}
+						successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", item, mainFilePath))
+					} else {
+						failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\n%s", mainFilePath, manualAppendMessage))
 						continue
 					}
-					successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", item, mainFilePath))
-				} else {
-					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\n%s", mainFilePath, manualAppendMessage))
-					continue
 				}
 			}
 		}

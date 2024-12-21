@@ -226,7 +226,3 @@ func FileStringExists(f *ast.File, commentText string) bool {
 	}
 	return false
 }
-
-func AppendStringAfterString(fileContent, stringToSearchAndAppend, stringToAdd string) {
-
-}
