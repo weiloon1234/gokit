@@ -6,7 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
-	"github.com/weiloon1234/gokit-base-entity/ent/mixin"
+	"github.com/weiloon1234/gokit/ent/mixin"
 )
 
 // Admin holds the schema definition for the Admin entity.

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"entgo.io/ent/dialect/sql"
-	"github.com/weiloon1234/gokit-base-entity/ent"
+	"github.com/weiloon1234/gokit/ent"
 )
 
 // AddSoftDeleteFilter applies a query filter to exclude soft-deleted records.
