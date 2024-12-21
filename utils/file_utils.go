@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"go/ast"
@@ -9,7 +10,6 @@ import (
 	"go/printer"
 	"go/token"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -150,25 +150,47 @@ func CopyFile(src, dst string) error {
 	return err
 }
 
-func FileParse(content []byte) (*ast.File, *token.FileSet, error) {
+// FileAddImport adds an import to the provided Go source code if it doesn't already exist.
+// It parses the source code, adds the import, sorts the imports, and returns the modified code.
+func FileAddImports(fileContent string, importsToAdd map[string]string) (string, error) {
+	// Parse the source code into an AST
 	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, "", content, parser.ParseComments)
+	file, err := parser.ParseFile(fset, "", fileContent, parser.ParseComments)
 	if err != nil {
-		return nil, nil, err
+		return "", err
 	}
-	return file, fset, nil
+
+	// Add imports from importsToAdd map
+	for importPath, alias := range importsToAdd {
+		if !importExists(file, importPath) {
+			addImport(file, importPath, alias)
+		}
+	}
+
+	// Sort the imports
+	ast.SortImports(fset, file)
+
+	// Convert the modified AST back to source code
+	var buf bytes.Buffer
+	if err := printer.Fprint(&buf, fset, file); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }
 
-func FileImportExists(f *ast.File, importPath string) bool {
+// importExists checks if the specified import path already exists in the AST.
+func importExists(f *ast.File, importPath string) bool {
 	for _, imp := range f.Imports {
-		if imp.Path.Value == `"`+importPath+`"` {
+		if strings.Trim(imp.Path.Value, `"`) == importPath {
 			return true
 		}
 	}
 	return false
 }
 
-func FileAddImport(f *ast.File, importPath, importName string) {
+// addImport adds a new import to the AST.
+func addImport(f *ast.File, importPath, importName string) {
 	newImport := &ast.ImportSpec{
 		Path: &ast.BasicLit{
 			Kind:  token.STRING,
@@ -178,11 +200,20 @@ func FileAddImport(f *ast.File, importPath, importName string) {
 	if importName != "" {
 		newImport.Name = ast.NewIdent(importName)
 	}
-	f.Imports = append(f.Imports, newImport)
-}
 
-func FileSortImports(fset *token.FileSet, f *ast.File) {
-	ast.SortImports(fset, f)
+	// Find the import declaration section
+	for _, decl := range f.Decls {
+		if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.IMPORT {
+			genDecl.Specs = append(genDecl.Specs, newImport)
+			return
+		}
+	}
+
+	// If no import declaration exists, create a new one
+	f.Decls = append([]ast.Decl{&ast.GenDecl{
+		Tok:   token.IMPORT,
+		Specs: []ast.Spec{newImport},
+	}}, f.Decls...)
 }
 
 func FileStringExists(f *ast.File, commentText string) bool {
@@ -196,44 +227,6 @@ func FileStringExists(f *ast.File, commentText string) bool {
 	return false
 }
 
-func FileAppendCodeAfterString(f *ast.File, stringToSearchAndAppend, codeToAdd string) {
-	for _, cg := range f.Comments {
-		for _, c := range cg.List {
-			if c.Text == stringToSearchAndAppend {
-				// Parse the new code into a statement
-				newStmt, err := parser.ParseExpr(codeToAdd)
-				if err != nil {
-					log.Fatalf("Failed to parse code to add: %v", err)
-				}
+func AppendStringAfterString(fileContent, stringToSearchAndAppend, stringToAdd string) {
 
-				// Create an expression statement
-				newExprStmt := &ast.ExprStmt{X: newStmt}
-
-				// Find the function declaration to insert the statement into
-				for _, decl := range f.Decls {
-					if funcDecl, ok := decl.(*ast.FuncDecl); ok {
-						// Insert the new statement at the beginning of the function body
-						funcDecl.Body.List = append([]ast.Stmt{newExprStmt}, funcDecl.Body.List...)
-						return
-					}
-				}
-			}
-		}
-	}
-}
-
-func FileWriteToFile(fset *token.FileSet, f *ast.File, filePath string) error {
-	// Create or truncate the file at the specified path
-	file, err := os.Create(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
-	}
-	defer file.Close()
-
-	// Write the AST to the file
-	if err := printer.Fprint(file, fset, f); err != nil {
-		return fmt.Errorf("failed to write file: %w", err)
-	}
-
-	return nil
 }

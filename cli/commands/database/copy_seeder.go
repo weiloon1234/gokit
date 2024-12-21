@@ -143,11 +143,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 					continue
 				}
 
-				f, fset, err := utils.FileParse(fileContent)
-				if err != nil {
-					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
-					continue
-				}
+				originalContent := string(fileContent)
 
 				// Check and add imports if necessary
 				importsToAdd := map[string]string{
@@ -155,25 +151,32 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 					fmt.Sprintf("%s/seeds", toModuleName):          "",
 				}
 
-				for path, name := range importsToAdd {
-					if !utils.FileImportExists(f, path) {
-						utils.FileAddImport(f, path, name)
-					}
+				originalContent, err = utils.FileAddImports(originalContent, importsToAdd)
+				if err != nil {
+					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+					continue
 				}
 
-				utils.FileSortImports(fset, f)
-
-				if utils.FileStringExists(f, stringToSearchAndAppend) {
-					utils.FileAppendCodeAfterString(f, stringToSearchAndAppend, registerLine)
-
-					err := utils.FileWriteToFile(fset, f, mainFilePath)
-					if err == nil {
-						successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", seed, mainFilePath))
-					} else {
-						failureMessages = append(failureMessages, fmt.Sprintf("Error writing updated content to %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+				if strings.Contains(originalContent, stringToSearchAndAppend) {
+					// Find the indentation before the autoRegisterLine
+					lines := strings.Split(originalContent, "\n")
+					var indent string
+					for _, line := range lines {
+						if strings.Contains(line, stringToSearchAndAppend) {
+							indent = line[:strings.Index(line, stringToSearchAndAppend)]
+							break
+						}
 					}
+
+					updatedContent := strings.Replace(originalContent, stringToSearchAndAppend, stringToSearchAndAppend+"\n"+indent+registerLine+"\n", 1)
+					if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
+						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+						continue
+					}
+					successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", seed, mainFilePath))
 				} else {
 					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, seed, registerLine))
+					continue
 				}
 			}
 		}
