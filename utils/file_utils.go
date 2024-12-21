@@ -38,6 +38,13 @@ func GetGoKitRootPath() (string, error) {
 		return "", errors.New("unable to retrieve caller information")
 	}
 
+	// Check if the current directory already contains the go.mod file
+	goModPath := filepath.Join(currentFilePath, "go.mod")
+	if _, err := os.Stat(goModPath); err == nil {
+		// go.mod file found; return the current directory
+		return currentFilePath, nil
+	}
+
 	// Start from the directory of the current file
 	dir := filepath.Dir(currentFilePath)
 
@@ -62,6 +69,13 @@ func GetProjectRootPath() (string, error) {
 	currentDir, err := os.Getwd()
 	if err != nil {
 		return "", fmt.Errorf("error getting current working directory: %v", err)
+	}
+
+	// Check if the current directory already contains the go.mod file
+	goModPath := filepath.Join(currentDir, "go.mod")
+	if _, err := os.Stat(goModPath); err == nil {
+		// go.mod file found; return the current directory
+		return currentDir, nil
 	}
 
 	// Start from the directory of the current file
