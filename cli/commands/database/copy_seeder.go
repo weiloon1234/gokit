@@ -130,7 +130,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 				" ",
 				"",
 			)
-			registerLine := fmt.Sprintf("gokitCommand.RegisterSeeder(\"%s\", seeds.%s)\n", seed, hookFuncName)
+			registerLine := fmt.Sprintf("goKitCommand.RegisterSeeder(\"%s\", func() { seeds.%s(entClient) })", seed, hookFuncName)
 			autoRegisterLine := "/** FOR GOKIT AUTO REGISTER SEEDER HERE, DON'T EDIT THIS LINE **/"
 
 			for _, mainFilePath := range []string{
