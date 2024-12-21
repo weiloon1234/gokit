@@ -36,29 +36,29 @@ func listSeeds(dir string) ([]string, error) {
 }
 
 func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
-	baseDir, err := utils.GetGoKitRootPath()
+	goKitRootPath, err := utils.GetGoKitRootPath()
 	if err != nil {
 		fmt.Printf("Error getting GoKit root path: %v\n", err)
 		return
 	}
 
-	currentDir, err := utils.GetProjectRootPath()
+	projectRootPath, err := utils.GetProjectRootPath()
 	if err != nil {
 		fmt.Printf("Error getting current working directory: %v\n", err)
 		return
 	}
 
-	goKitSeedDir := filepath.Join(baseDir, "seeds")
-	projectSeedDir := filepath.Join(currentDir, "seeds")
+	goKitDir := filepath.Join(goKitRootPath, "seeds")
+	projectDir := filepath.Join(projectRootPath, "seeds")
 
-	seeds, err := listSeeds(goKitSeedDir)
+	items, err := listSeeds(goKitDir)
 	if err != nil {
 		fmt.Printf("Error listing seeds: %v\n", err)
 		return
 	}
 
-	fromModuleName, ok1 := utils.GetModuleName(baseDir)
-	toModuleName, ok2 := utils.GetModuleName(currentDir)
+	fromModuleName, ok1 := utils.GetModuleName(goKitRootPath)
+	toModuleName, ok2 := utils.GetModuleName(projectRootPath)
 
 	if ok1 != nil || ok2 != nil {
 		fmt.Printf("Error getting module name: %v\n", err)
@@ -66,80 +66,81 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 	}
 
 	// Ensure the target directory exists
-	if err := os.MkdirAll(projectSeedDir, os.ModePerm); err != nil {
-		fmt.Printf("Error creating directory %s: %v\n", projectSeedDir, err)
+	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
+		fmt.Printf("Error creating directory %s: %v\n", projectDir, err)
 	}
 
 	fmt.Println("Available seeds to copy:")
-	for _, seed := range seeds {
-		fmt.Printf(" - %s\n", seed)
+	for _, item := range items {
+		fmt.Printf(" - %s\n", item)
 	}
 
 	fmt.Print("Enter the seeds to copy (comma-separated): ")
 	var input string
 	fmt.Scanln(&input)
-	selectedSeeds := strings.Split(input, ",")
+	selectedItems := strings.Split(input, ",")
 
-	var successSeeds []string
-	for _, seed := range selectedSeeds {
-		seed = strings.TrimSpace(seed)
-		if seed == "" {
+	var successItems []string
+	for _, item := range selectedItems {
+		item = strings.TrimSpace(item)
+		if item == "" {
 			continue
 		}
 
-		baseFile := filepath.Join(goKitSeedDir, seed+".go")
-		targetFile := filepath.Join(projectSeedDir, seed+".go")
+		baseFile := filepath.Join(goKitDir, item+".go")
+		targetFile := filepath.Join(projectDir, item+".go")
 
 		if utils.FileExists(targetFile) {
 			fmt.Printf("Make you you have back up your file if choose to overwrite\n")
-			fmt.Printf("Seed %s already exists in the project. Do you want to overwrite it? (y/n): ", seed)
+			fmt.Printf("Seed %s already exists in the project. Do you want to overwrite it? (y/n): ", item)
 			var response string
 			fmt.Scanln(&response)
 			response = strings.ToLower(strings.TrimSpace(response))
 			if response != "y" && response != "yes" {
-				fmt.Printf("Skipping %s.\n", seed)
+				fmt.Printf("Skipping %s.\n", item)
 				continue
 			}
 		}
 
 		baseContent, err := os.ReadFile(baseFile)
 		if err != nil {
-			fmt.Printf("Error reading %s: %v\n", seed, err)
+			fmt.Printf("Error reading %s: %v\n", item, err)
 			continue
 		}
 
 		updatedContent := []byte(strings.ReplaceAll(string(baseContent), fromModuleName, toModuleName))
 
 		if err := os.WriteFile(targetFile, updatedContent, 0644); err != nil {
-			fmt.Printf("Error writing %s: %v\n", seed, err)
+			fmt.Printf("Error writing %s: %v\n", item, err)
 			continue
 		}
 
-		fmt.Printf("Successfully copied %s to the project.\n", seed)
-		successSeeds = append(successSeeds, seed)
+		fmt.Printf("Successfully copied %s to the project.\n", item)
+		successItems = append(successItems, item)
 	}
 
 	stringToSearchAndAppend := "/** FOR GOKIT AUTO REGISTER SEEDER HERE, DON'T EDIT THIS LINE **/"
 
-	if len(successSeeds) > 0 {
+	if len(successItems) > 0 {
 		fmt.Printf("======================\n")
 		var successMessages []string
 		var failureMessages []string
 
-		for _, seed := range successSeeds {
-			hookFuncName := strings.ReplaceAll(
-				cases.Title(language.English).String(strings.ReplaceAll(seed, "_", " ")),
+		for _, item := range successItems {
+			funcName := strings.ReplaceAll(
+				cases.Title(language.English).String(strings.ReplaceAll(item, "_", " ")),
 				" ",
 				"",
 			)
-			registerLine := fmt.Sprintf("goKitCommand.RegisterSeeder(\"%s\", func() { seeds.%s(entClient) })", seed, hookFuncName)
+			registerLine := fmt.Sprintf("goKitCommand.RegisterSeeder(\"%s\", func() { seeds.%s(entClient) })", item, funcName)
+			manualAppendMessage := fmt.Sprintf("Please register %s manually.\nRegister in main.go like this\n%s", item, registerLine)
 
 			for _, mainFilePath := range []string{
-				filepath.Join(currentDir, "cmd", "cli", "main.go"),
+				filepath.Join(projectRootPath, "cmd", "cli", "main.go"),
 			} {
 				fileContent, err := os.ReadFile(mainFilePath)
 				if err != nil {
-					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
 					continue
 				}
 
@@ -153,12 +154,12 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 
 				originalContent, err = utils.FileAddImports(originalContent, importsToAdd)
 				if err != nil {
-					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
 					continue
 				}
 
 				if strings.Contains(originalContent, stringToSearchAndAppend) {
-					// Find the indentation before the autoRegisterLine
+					// Find the indentation before the stringToSearchAndAppend
 					lines := strings.Split(originalContent, "\n")
 					var indent string
 					for _, line := range lines {
@@ -170,12 +171,12 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 
 					updatedContent := strings.Replace(originalContent, stringToSearchAndAppend, stringToSearchAndAppend+"\n"+indent+registerLine+"\n", 1)
 					if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
-						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\n%s", mainFilePath, err, manualAppendMessage))
 						continue
 					}
-					successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", seed, mainFilePath))
+					successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", item, mainFilePath))
 				} else {
-					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, seed, registerLine))
+					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\n%s", mainFilePath, manualAppendMessage))
 					continue
 				}
 			}
@@ -193,13 +194,12 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 			for _, msg := range failureMessages {
 				fmt.Printf(" - %s\n", msg)
 			}
-			fmt.Printf("Please register the hooks manually in the respective main.go files.\n")
 		}
 
 		fmt.Printf("======================\n")
 		fmt.Printf("If undefined goKitCommand please import goKitCommand \"github.com/weiloon1234/gokit/cli/commands\"\n")
-		fmt.Printf("Please remember to import seeds package in main.go\n")
-		fmt.Printf("Remember to rebuild entity after copying hooks.\n")
+		fmt.Printf("If undefined seeds please import your project seeds package\n")
+		fmt.Printf("======================\n")
 	} else {
 		fmt.Printf("======================\n")
 		fmt.Printf("No hooks copied.\n")
