@@ -56,6 +56,11 @@ func runCopyBaseEntity(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// Ensure the target directory exists
+	if err := os.MkdirAll(projectSchemaDir, os.ModePerm); err != nil {
+		fmt.Printf("Error creating directory %s: %v\n", projectSchemaDir, err)
+	}
+
 	fmt.Println("Available entities to copy:")
 	for _, entity := range entities {
 		fmt.Printf(" - %s\n", entity)

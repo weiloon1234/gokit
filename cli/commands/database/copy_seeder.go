@@ -57,6 +57,11 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// Ensure the target directory exists
+	if err := os.MkdirAll(projectSeedDir, os.ModePerm); err != nil {
+		fmt.Printf("Error creating directory %s: %v\n", projectSeedDir, err)
+	}
+
 	fmt.Println("Available seeds to copy:")
 	for _, seed := range seeds {
 		fmt.Printf(" - %s\n", seed)

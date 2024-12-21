@@ -56,6 +56,11 @@ func runCopyEntityMixin(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// Ensure the target directory exists
+	if err := os.MkdirAll(projectMixinDir, os.ModePerm); err != nil {
+		fmt.Printf("Error creating directory %s: %v\n", projectMixinDir, err)
+	}
+
 	fmt.Println("Available entities to copy:")
 	for _, mixin := range mixins {
 		fmt.Printf(" - %s\n", mixin)

@@ -57,6 +57,11 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	// Ensure the target directory exists
+	if err := os.MkdirAll(projectHookDir, os.ModePerm); err != nil {
+		fmt.Printf("Error creating directory %s: %v\n", projectHookDir, err)
+	}
+
 	fmt.Println("Available hooks to copy:")
 	for _, hook := range hooks {
 		fmt.Printf(" - %s\n", hook)
