@@ -119,8 +119,11 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		successItems = append(successItems, item)
 	}
 
+	fmt.Printf("Below try to auto register seeds\n")
+
 	//Below for register seeders automatically
 	stringToSearchAndAppend := "/** FOR GOKIT AUTO REGISTER SEEDER HERE, DON'T EDIT THIS LINE **/"
+	missing := false
 
 	if len(successItems) > 0 {
 		fmt.Printf("======================\n")
@@ -141,7 +144,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 			} {
 				fileContent, err := os.ReadFile(mainFilePath)
 				if err != nil {
-					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
 					continue
 				}
 
@@ -155,7 +158,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 
 				originalContent, err = utils.FileAddImports(originalContent, importsToAdd)
 				if err != nil {
-					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
 					continue
 				}
 
@@ -175,12 +178,13 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 
 						updatedContent := strings.Replace(originalContent, stringToSearchAndAppend, stringToSearchAndAppend+"\n"+indent+registerLine, 1)
 						if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
-							failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+							failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error writing to %s: %v\n%s", mainFilePath, err, manualAppendMessage))
 							continue
 						}
-						successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", item, mainFilePath))
+						successMessages = append(successMessages, fmt.Sprintf("Auto-register: %s registered in %s", item, mainFilePath))
 					} else {
-						failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\n%s", mainFilePath, manualAppendMessage))
+						failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: line not found in %s\n%s", mainFilePath, manualAppendMessage))
+						missing = true
 						continue
 					}
 				}
@@ -202,6 +206,10 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		}
 
 		fmt.Printf("======================\n")
+		if missing {
+			fmt.Printf("You main.go missing the placeholder, please add back the placeholder\n")
+			fmt.Printf("%s", stringToSearchAndAppend+"\n")
+		}
 		fmt.Printf("If undefined goKitCommand please import goKitCommand \"github.com/weiloon1234/gokit/cli/commands\"\n")
 		fmt.Printf("If undefined seeds please import your project seeds package\n")
 		fmt.Printf("======================\n")
