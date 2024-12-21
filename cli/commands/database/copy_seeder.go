@@ -12,10 +12,10 @@ import (
 	"golang.org/x/text/language"
 )
 
-var CopyEntitySeederCmd = &cobra.Command{
-	Use:   "entity:copy-seeder",
-	Short: "Copy entity seeder to your project",
-	Run:   runCopyEntitySeeder,
+var CopyDatabaseSeederCmd = &cobra.Command{
+	Use:   "database:copy-seeder",
+	Short: "Copy database seeder to your project",
+	Run:   runCopyDatabaseSeeder,
 }
 
 func listSeeds(dir string) ([]string, error) {
@@ -35,7 +35,7 @@ func listSeeds(dir string) ([]string, error) {
 	return hooks, nil
 }
 
-func runCopyEntitySeeder(cmd *cobra.Command, args []string) {
+func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 	baseDir, ok := utils.GetGoKitRootPath()
 	if ok != nil {
 		fmt.Printf("Error getting GoKit root path: %v\n", ok)
