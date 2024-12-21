@@ -156,7 +156,7 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 						}
 					}
 
-					updatedContent := strings.Replace(contentStr, autoRegisterLine, autoRegisterLine+"\n"+indent+registerLine, 1)
+					updatedContent := strings.Replace(contentStr, autoRegisterLine, autoRegisterLine+"\n"+indent+registerLine+"\n", 1)
 					if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
 						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, hook, registerLine))
 						continue

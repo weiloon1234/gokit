@@ -154,7 +154,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 						}
 					}
 
-					updatedContent := strings.Replace(contentStr, autoRegisterLine, autoRegisterLine+"\n"+indent+registerLine, 1)
+					updatedContent := strings.Replace(contentStr, autoRegisterLine, autoRegisterLine+"\n"+indent+registerLine+"\n", 1)
 					if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
 						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
 						continue
@@ -182,7 +182,8 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		}
 
 		fmt.Printf("======================\n")
-		fmt.Printf("If undefined goKitCommand please import goKitCommand \"github.com/weiloon1234/gokit/cli/commands\"")
+		fmt.Printf("If undefined goKitCommand please import goKitCommand \"github.com/weiloon1234/gokit/cli/commands\"\n")
+		fmt.Printf("Please remember to import seeds package in main.go\n")
 		fmt.Printf("Remember to rebuild entity after copying hooks.\n")
 	} else {
 		fmt.Printf("======================\n")
