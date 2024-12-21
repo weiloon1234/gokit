@@ -15,7 +15,9 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.8.1
 	github.com/xuri/excelize/v2 v2.9.0
+	github.com/kr/pretty v0.3.0
 	golang.org/x/image v0.22.0
+	gopkg.in/check.v1 v1.0.0
 )
 
 require (
