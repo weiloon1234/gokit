@@ -2,13 +2,14 @@ package utils
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/parser"
 	"go/printer"
 	"go/token"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -149,6 +150,15 @@ func CopyFile(src, dst string) error {
 	return err
 }
 
+func FileParse(content []byte) (*ast.File, *token.FileSet, error) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "", content, parser.ParseComments)
+	if err != nil {
+		return nil, nil, err
+	}
+	return file, fset, nil
+}
+
 func FileImportExists(f *ast.File, importPath string) bool {
 	for _, imp := range f.Imports {
 		if imp.Path.Value == `"`+importPath+`"` {
@@ -158,22 +168,72 @@ func FileImportExists(f *ast.File, importPath string) bool {
 	return false
 }
 
-func FileAddImport(fset *token.FileSet, f *ast.File, importPath string) {
+func FileAddImport(f *ast.File, importPath, importName string) {
 	newImport := &ast.ImportSpec{
 		Path: &ast.BasicLit{
 			Kind:  token.STRING,
 			Value: `"` + importPath + `"`,
 		},
 	}
+	if importName != "" {
+		newImport.Name = ast.NewIdent(importName)
+	}
 	f.Imports = append(f.Imports, newImport)
-	// Ensure imports are sorted and formatted correctly
+}
+
+func FileSortImports(fset *token.FileSet, f *ast.File) {
 	ast.SortImports(fset, f)
 }
 
-func FileWriteToBytes(fset *token.FileSet, f *ast.File) ([]byte, error) {
-	var buf bytes.Buffer
-	if err := printer.Fprint(&buf, fset, f); err != nil {
-		return nil, err
+func FileStringExists(f *ast.File, commentText string) bool {
+	for _, cg := range f.Comments {
+		for _, c := range cg.List {
+			if c.Text == commentText {
+				return true
+			}
+		}
 	}
-	return buf.Bytes(), nil
+	return false
+}
+
+func FileAppendCodeAfterString(f *ast.File, stringToSearchAndAppend, codeToAdd string) {
+	for _, cg := range f.Comments {
+		for _, c := range cg.List {
+			if c.Text == stringToSearchAndAppend {
+				// Parse the new code into a statement
+				newStmt, err := parser.ParseExpr(codeToAdd)
+				if err != nil {
+					log.Fatalf("Failed to parse code to add: %v", err)
+				}
+
+				// Create an expression statement
+				newExprStmt := &ast.ExprStmt{X: newStmt}
+
+				// Find the function declaration to insert the statement into
+				for _, decl := range f.Decls {
+					if funcDecl, ok := decl.(*ast.FuncDecl); ok {
+						// Insert the new statement at the beginning of the function body
+						funcDecl.Body.List = append([]ast.Stmt{newExprStmt}, funcDecl.Body.List...)
+						return
+					}
+				}
+			}
+		}
+	}
+}
+
+func FileWriteToFile(fset *token.FileSet, f *ast.File, filePath string) error {
+	// Create or truncate the file at the specified path
+	file, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer file.Close()
+
+	// Write the AST to the file
+	if err := printer.Fprint(file, fset, f); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
 }

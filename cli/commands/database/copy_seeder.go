@@ -10,9 +10,6 @@ import (
 	"github.com/weiloon1234/gokit/utils"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
-
-	"go/parser"
-	"go/token"
 )
 
 var CopyDatabaseSeederCmd = &cobra.Command{
@@ -39,15 +36,15 @@ func listSeeds(dir string) ([]string, error) {
 }
 
 func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
-	baseDir, ok := utils.GetGoKitRootPath()
-	if ok != nil {
-		fmt.Printf("Error getting GoKit root path: %v\n", ok)
+	baseDir, err := utils.GetGoKitRootPath()
+	if err != nil {
+		fmt.Printf("Error getting GoKit root path: %v\n", err)
 		return
 	}
 
-	currentDir, ok2 := utils.GetProjectRootPath()
-	if ok2 != nil {
-		fmt.Printf("Error getting current working directory: %v\n", ok2)
+	currentDir, err := utils.GetProjectRootPath()
+	if err != nil {
+		fmt.Printf("Error getting current working directory: %v\n", err)
 		return
 	}
 
@@ -122,6 +119,8 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		successSeeds = append(successSeeds, seed)
 	}
 
+	stringToSearchAndAppend := "/** FOR GOKIT AUTO REGISTER SEEDER HERE, DON'T EDIT THIS LINE **/"
+
 	if len(successSeeds) > 0 {
 		fmt.Printf("======================\n")
 		var successMessages []string
@@ -134,60 +133,45 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 				"",
 			)
 			registerLine := fmt.Sprintf("goKitCommand.RegisterSeeder(\"%s\", func() { seeds.%s(entClient) })", seed, hookFuncName)
-			autoRegisterLine := "/** FOR GOKIT AUTO REGISTER SEEDER HERE, DON'T EDIT THIS LINE **/"
 
 			for _, mainFilePath := range []string{
 				filepath.Join(currentDir, "cmd", "cli", "main.go"),
 			} {
-				mainFileContent, err := os.ReadFile(mainFilePath)
+				fileContent, err := os.ReadFile(mainFilePath)
 				if err != nil {
 					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
 					continue
 				}
 
-				// Parse the source content
-				fset := token.NewFileSet()
-				file, err := parser.ParseFile(fset, "", mainFileContent, parser.ParseComments)
+				f, fset, err := utils.FileParse(fileContent)
 				if err != nil {
 					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+					continue
 				}
 
-				// Define the import path to add
-				importPath := fmt.Sprintf("%s/seeds", toModuleName)
-
-				var contentStr string
-
-				if !utils.FileImportExists(file, importPath) {
-					utils.FileAddImport(fset, file, importPath)
-
-					// Write the modified AST back to a byte slice
-					importedStr, err := utils.FileWriteToBytes(fset, file)
-					if err != nil {
-						failureMessages = append(failureMessages, fmt.Sprintf("Error import %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
-					}
-
-					contentStr = string(importedStr)
-				} else {
-					contentStr = string(mainFileContent)
+				// Check and add imports if necessary
+				importsToAdd := map[string]string{
+					fmt.Sprintf("%s/cli/commands", fromModuleName): "goKitCommand",
+					fmt.Sprintf("%s/seeds", toModuleName):          "",
 				}
 
-				if strings.Contains(contentStr, autoRegisterLine) {
-					// Find the indentation before the autoRegisterLine
-					lines := strings.Split(contentStr, "\n")
-					var indent string
-					for _, line := range lines {
-						if strings.Contains(line, autoRegisterLine) {
-							indent = line[:strings.Index(line, autoRegisterLine)]
-							break
-						}
+				for path, name := range importsToAdd {
+					if !utils.FileImportExists(f, path) {
+						utils.FileAddImport(f, path, name)
 					}
+				}
 
-					updatedContent := strings.Replace(contentStr, autoRegisterLine, autoRegisterLine+"\n"+indent+registerLine+"\n", 1)
-					if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
-						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
-						continue
+				utils.FileSortImports(fset, f)
+
+				if utils.FileStringExists(f, stringToSearchAndAppend) {
+					utils.FileAppendCodeAfterString(f, stringToSearchAndAppend, registerLine)
+
+					err := utils.FileWriteToFile(fset, f, mainFilePath)
+					if err == nil {
+						successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", seed, mainFilePath))
+					} else {
+						failureMessages = append(failureMessages, fmt.Sprintf("Error writing updated content to %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
 					}
-					successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", seed, mainFilePath))
 				} else {
 					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, seed, registerLine))
 				}
