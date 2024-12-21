@@ -85,8 +85,8 @@ func runCopyBaseEntity(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		baseFile := filepath.Join(goKitRootPath, item+".go")
-		targetFile := filepath.Join(projectRootPath, item+".go")
+		baseFile := filepath.Join(goKitDir, item+".go")
+		targetFile := filepath.Join(projectDir, item+".go")
 
 		// Check if the entity already exists in the project
 		if utils.FileExists(targetFile) {
