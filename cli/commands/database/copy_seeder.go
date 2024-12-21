@@ -10,6 +10,9 @@ import (
 	"github.com/weiloon1234/gokit/utils"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"go/parser"
+	"go/token"
 )
 
 var CopyDatabaseSeederCmd = &cobra.Command{
@@ -57,6 +60,14 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	fromModuleName, ok1 := utils.GetModuleName(baseDir)
+	toModuleName, ok2 := utils.GetModuleName(currentDir)
+
+	if ok1 != nil || ok2 != nil {
+		fmt.Printf("Error getting module name: %v\n", err)
+		return
+	}
+
 	// Ensure the target directory exists
 	if err := os.MkdirAll(projectSeedDir, os.ModePerm); err != nil {
 		fmt.Printf("Error creating directory %s: %v\n", projectSeedDir, err)
@@ -92,14 +103,6 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 				fmt.Printf("Skipping %s.\n", seed)
 				continue
 			}
-		}
-
-		fromModuleName, ok1 := utils.GetModuleName(baseDir)
-		toModuleName, ok2 := utils.GetModuleName(currentDir)
-
-		if ok1 != nil || ok2 != nil {
-			fmt.Printf("Error getting module name: %v\n", err)
-			continue
 		}
 
 		baseContent, err := os.ReadFile(baseFile)
@@ -142,7 +145,32 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 					continue
 				}
 
-				contentStr := string(mainFileContent)
+				// Parse the source content
+				fset := token.NewFileSet()
+				file, err := parser.ParseFile(fset, "", mainFileContent, parser.ParseComments)
+				if err != nil {
+					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+				}
+
+				// Define the import path to add
+				importPath := fmt.Sprintf("%s/seeds", toModuleName)
+
+				var contentStr string
+
+				if !utils.FileImportExists(file, importPath) {
+					utils.FileAddImport(fset, file, importPath)
+
+					// Write the modified AST back to a byte slice
+					importedStr, err := utils.FileWriteToBytes(fset, file)
+					if err != nil {
+						failureMessages = append(failureMessages, fmt.Sprintf("Error import %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, seed, registerLine))
+					}
+
+					contentStr = string(importedStr)
+				} else {
+					contentStr = string(mainFileContent)
+				}
+
 				if strings.Contains(contentStr, autoRegisterLine) {
 					// Find the indentation before the autoRegisterLine
 					lines := strings.Split(contentStr, "\n")

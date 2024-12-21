@@ -2,8 +2,12 @@ package utils
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/printer"
+	"go/token"
 	"io"
 	"os"
 	"path/filepath"
@@ -143,4 +147,33 @@ func CopyFile(src, dst string) error {
 
 	_, err = io.Copy(dstFile, srcFile)
 	return err
+}
+
+func FileImportExists(f *ast.File, importPath string) bool {
+	for _, imp := range f.Imports {
+		if imp.Path.Value == `"`+importPath+`"` {
+			return true
+		}
+	}
+	return false
+}
+
+func FileAddImport(fset *token.FileSet, f *ast.File, importPath string) {
+	newImport := &ast.ImportSpec{
+		Path: &ast.BasicLit{
+			Kind:  token.STRING,
+			Value: `"` + importPath + `"`,
+		},
+	}
+	f.Imports = append(f.Imports, newImport)
+	// Ensure imports are sorted and formatted correctly
+	ast.SortImports(fset, f)
+}
+
+func FileWriteToBytes(fset *token.FileSet, f *ast.File) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := printer.Fprint(&buf, fset, f); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }
