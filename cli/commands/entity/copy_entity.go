@@ -88,11 +88,25 @@ func runCopyBaseEntity(cmd *cobra.Command, args []string) {
 			}
 		}
 
-		// Copy the schema file
-		if err := utils.CopyFile(baseFile, targetFile); err != nil {
-			fmt.Printf("Error copying %s: %v\n", entity, err)
-		} else {
-			fmt.Printf("Successfully copied %s to the project.\n", entity)
+		fromModuleName, ok1 := utils.GetModuleName(baseDir)
+		toModuleName, ok2 := utils.GetModuleName(currentDir)
+
+		if ok1 != nil || ok2 != nil {
+			fmt.Printf("Error getting module name: %v\n", err)
+			continue
+		}
+
+		baseContent, err := os.ReadFile(baseFile)
+		if err != nil {
+			fmt.Printf("Error reading %s: %v\n", entity, err)
+			continue
+		}
+
+		updatedContent := []byte(strings.ReplaceAll(string(baseContent), fromModuleName, toModuleName))
+
+		if err := os.WriteFile(targetFile, updatedContent, 0644); err != nil {
+			fmt.Printf("Error writing %s: %v\n", entity, err)
+			continue
 		}
 	}
 
