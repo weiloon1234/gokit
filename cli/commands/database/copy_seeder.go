@@ -26,7 +26,7 @@ func listSeeds(dir string) ([]string, error) {
 
 	var hooks []string
 	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".go") || strings.HasPrefix(file.Name(), "hook.go") {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".go") {
 			continue
 		}
 		hook := strings.TrimSuffix(file.Name(), ".go")
@@ -183,14 +183,14 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		}
 
 		if len(successMessages) > 0 {
-			fmt.Printf("%d hook(s) automatically registered successfully:\n", len(successMessages))
+			fmt.Printf("%d seed(s) automatically registered successfully:\n", len(successMessages))
 			for _, msg := range successMessages {
 				fmt.Printf(" - %s\n", msg)
 			}
 		}
 
 		if len(failureMessages) > 0 {
-			fmt.Printf("%d hook(s) failed to register:\n", len(failureMessages))
+			fmt.Printf("%d seed(s) failed to register:\n", len(failureMessages))
 			for _, msg := range failureMessages {
 				fmt.Printf(" - %s\n", msg)
 			}
@@ -202,7 +202,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		fmt.Printf("======================\n")
 	} else {
 		fmt.Printf("======================\n")
-		fmt.Printf("No hooks copied.\n")
+		fmt.Printf("No seeds copied.\n")
 		fmt.Printf("======================\n")
 	}
 

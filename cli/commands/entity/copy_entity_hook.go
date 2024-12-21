@@ -36,134 +36,148 @@ func listHooks(dir string) ([]string, error) {
 }
 
 func runCopyEntityHook(cmd *cobra.Command, args []string) {
-	baseDir, ok := utils.GetGoKitRootPath()
-	if ok != nil {
-		fmt.Printf("Error getting GoKit root path: %v\n", ok)
+	goKitRootPath, err := utils.GetGoKitRootPath()
+	if err != nil {
+		fmt.Printf("Error getting GoKit root path: %v\n", err)
 		return
 	}
 
-	currentDir, ok2 := utils.GetProjectRootPath()
-	if ok2 != nil {
-		fmt.Printf("Error getting current working directory: %v\n", ok2)
+	projectRootPath, err := utils.GetProjectRootPath()
+	if err != nil {
+		fmt.Printf("Error getting current working directory: %v\n", err)
 		return
 	}
 
-	goKitHookDir := filepath.Join(baseDir, "ent", "hook")
-	projectHookDir := filepath.Join(currentDir, "ent", "hook")
+	goKitDir := filepath.Join(goKitRootPath, "ent", "hook")
+	projectDir := filepath.Join(projectRootPath, "ent", "hook")
 
-	hooks, err := listHooks(goKitHookDir)
+	items, err := listHooks(goKitDir)
 	if err != nil {
 		fmt.Printf("Error listing hooks: %v\n", err)
 		return
 	}
 
+	fromModuleName, ok1 := utils.GetModuleName(goKitRootPath)
+	toModuleName, ok2 := utils.GetModuleName(projectRootPath)
+
+	if ok1 != nil || ok2 != nil {
+		fmt.Printf("Error getting module name: %v\n", err)
+		return
+	}
+
 	// Ensure the target directory exists
-	if err := os.MkdirAll(projectHookDir, os.ModePerm); err != nil {
-		fmt.Printf("Error creating directory %s: %v\n", projectHookDir, err)
+	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
+		fmt.Printf("Error creating directory %s: %v\n", projectDir, err)
 	}
 
-	fmt.Println("Available hooks to copy:")
-	for _, hook := range hooks {
-		fmt.Printf(" - %s\n", hook)
+	fmt.Println("Available hook to copy:")
+	for _, item := range items {
+		fmt.Printf(" - %s\n", item)
 	}
 
-	fmt.Print("Enter the hooks to copy (comma-separated): ")
+	fmt.Print("Enter the hook to copy (comma-separated): ")
 	var input string
 	fmt.Scanln(&input)
-	selectedHooks := strings.Split(input, ",")
+	selectedItems := strings.Split(input, ",")
 
-	var successHooks []string
-	for _, hook := range selectedHooks {
-		hook = strings.TrimSpace(hook)
-		if hook == "" {
+	var successItems []string
+	for _, item := range selectedItems {
+		item = strings.TrimSpace(item)
+		if item == "" {
 			continue
 		}
 
-		baseFile := filepath.Join(goKitHookDir, hook+".go")
-		targetFile := filepath.Join(projectHookDir, hook+".go")
+		baseFile := filepath.Join(goKitDir, item+".go")
+		targetFile := filepath.Join(projectDir, item+".go")
 
-		// Check if the entity already exists in the project
 		if utils.FileExists(targetFile) {
 			fmt.Printf("Make you you have back up your file if choose to overwrite\n")
-			fmt.Printf("Hook %s already exists in the project. Do you want to overwrite it? (y/n): ", hook)
+			fmt.Printf("Seed %s already exists in the project. Do you want to overwrite it? (y/n): ", item)
 			var response string
 			fmt.Scanln(&response)
 			response = strings.ToLower(strings.TrimSpace(response))
 			if response != "y" && response != "yes" {
-				fmt.Printf("Skipping %s.\n", hook)
+				fmt.Printf("Skipping %s.\n", item)
 				continue
 			}
 		}
 
-		fromModuleName, ok1 := utils.GetModuleName(baseDir)
-		toModuleName, ok2 := utils.GetModuleName(currentDir)
-
-		if ok1 != nil || ok2 != nil {
-			fmt.Printf("Error getting module name: %v\n", err)
-			continue
-		}
-
 		baseContent, err := os.ReadFile(baseFile)
 		if err != nil {
-			fmt.Printf("Error reading %s: %v\n", hook, err)
+			fmt.Printf("Error reading %s: %v\n", item, err)
 			continue
 		}
 
 		updatedContent := []byte(strings.ReplaceAll(string(baseContent), fromModuleName, toModuleName))
 
 		if err := os.WriteFile(targetFile, updatedContent, 0644); err != nil {
-			fmt.Printf("Error writing %s: %v\n", hook, err)
+			fmt.Printf("Error writing %s: %v\n", item, err)
 			continue
 		}
 
-		fmt.Printf("Successfully copied %s to the project.\n", hook)
-		successHooks = append(successHooks, hook)
+		fmt.Printf("Successfully copied %s to the project.\n", item)
+		successItems = append(successItems, item)
 	}
 
-	if len(successHooks) > 0 {
+	stringToSearchAndAppend := "/** FOR GOKIT AUTO REGISTER ENTITY HOOKS HERE, DON'T EDIT THIS LINE **/"
+
+	if len(successItems) > 0 {
 		fmt.Printf("======================\n")
 		var successMessages []string
 		var failureMessages []string
 
-		for _, hook := range successHooks {
-			hookFuncName := strings.ReplaceAll(
-				cases.Title(language.English).String(strings.ReplaceAll(hook, "_", " ")),
+		for _, item := range successItems {
+			funcName := strings.ReplaceAll(
+				cases.Title(language.English).String(strings.ReplaceAll(item, "_", " ")),
 				" ",
 				"",
 			)
-			registerLine := fmt.Sprintf("hook.%s(entClient)\n", hookFuncName)
-			autoRegisterLine := "/** FOR GOKIT AUTO REGISTER ENTITY HOOKS HERE, DON'T EDIT THIS LINE **/"
+			registerLine := fmt.Sprintf("hook.%s(entClient)\n", funcName)
+			manualAppendMessage := fmt.Sprintf("Please register %s manually.\nRegister in main.go like this\n%s", item, registerLine)
 
 			for _, mainFilePath := range []string{
-				filepath.Join(currentDir, "cmd", "cli", "main.go"),
-				filepath.Join(currentDir, "cmd", "web", "main.go"),
+				filepath.Join(projectRootPath, "cmd", "cli", "main.go"),
+				filepath.Join(projectRootPath, "cmd", "web", "main.go"),
 			} {
-				mainFileContent, err := os.ReadFile(mainFilePath)
+				fileContent, err := os.ReadFile(mainFilePath)
 				if err != nil {
-					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, hook, registerLine))
+					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
 					continue
 				}
 
-				contentStr := string(mainFileContent)
-				if strings.Contains(contentStr, autoRegisterLine) {
-					// Find the indentation before the autoRegisterLine
-					lines := strings.Split(contentStr, "\n")
+				originalContent := string(fileContent)
+
+				// Check and add imports if necessary
+				importsToAdd := map[string]string{
+					fmt.Sprintf("%s/ent/hook", toModuleName): "",
+				}
+
+				originalContent, err = utils.FileAddImports(originalContent, importsToAdd)
+				if err != nil {
+					failureMessages = append(failureMessages, fmt.Sprintf("Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+					continue
+				}
+
+				if strings.Contains(originalContent, stringToSearchAndAppend) {
+					// Find the indentation before the stringToSearchAndAppend
+					lines := strings.Split(originalContent, "\n")
 					var indent string
 					for _, line := range lines {
-						if strings.Contains(line, autoRegisterLine) {
-							indent = line[:strings.Index(line, autoRegisterLine)]
+						if strings.Contains(line, stringToSearchAndAppend) {
+							indent = line[:strings.Index(line, stringToSearchAndAppend)]
 							break
 						}
 					}
 
-					updatedContent := strings.Replace(contentStr, autoRegisterLine, autoRegisterLine+"\n"+indent+registerLine+"\n", 1)
+					updatedContent := strings.Replace(originalContent, stringToSearchAndAppend, stringToSearchAndAppend+"\n"+indent+registerLine+"\n", 1)
 					if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
-						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, err, hook, registerLine))
+						failureMessages = append(failureMessages, fmt.Sprintf("Error writing to %s: %v\n%s", mainFilePath, err, manualAppendMessage))
 						continue
 					}
-					successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", hook, mainFilePath))
+					successMessages = append(successMessages, fmt.Sprintf("%s registered in %s", item, mainFilePath))
 				} else {
-					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\nPlease register %s manually.\nRegister in main.go like this\n%s", mainFilePath, hook, registerLine))
+					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register line not found in %s\n%s", mainFilePath, manualAppendMessage))
+					continue
 				}
 			}
 		}
@@ -180,16 +194,16 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 			for _, msg := range failureMessages {
 				fmt.Printf(" - %s\n", msg)
 			}
-			fmt.Printf("Please register the hooks manually in the respective main.go files.\n")
 		}
 
 		fmt.Printf("======================\n")
-		fmt.Printf("Remember to rebuild entity after copying hooks.\n")
+		fmt.Printf("If undefined hook please import your project ent/hook package\n")
+		fmt.Printf("======================\n")
 	} else {
 		fmt.Printf("======================\n")
 		fmt.Printf("No hooks copied.\n")
 		fmt.Printf("======================\n")
 	}
 
-	fmt.Println("Copy Entity Hook completed successfully")
+	fmt.Println("Copy Hooks completed successfully")
 }
