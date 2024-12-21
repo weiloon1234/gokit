@@ -119,6 +119,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		successItems = append(successItems, item)
 	}
 
+	//Below for register seeders automatically
 	stringToSearchAndAppend := "/** FOR GOKIT AUTO REGISTER SEEDER HERE, DON'T EDIT THIS LINE **/"
 
 	if len(successItems) > 0 {

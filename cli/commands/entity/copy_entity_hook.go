@@ -92,7 +92,7 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 
 		if utils.FileExists(targetFile) {
 			fmt.Printf("Make you you have back up your file if choose to overwrite\n")
-			fmt.Printf("Seed %s already exists in the project. Do you want to overwrite it? (y/n): ", item)
+			fmt.Printf("Hook %s already exists in the project. Do you want to overwrite it? (y/n): ", item)
 			var response string
 			fmt.Scanln(&response)
 			response = strings.ToLower(strings.TrimSpace(response))
@@ -119,6 +119,7 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 		successItems = append(successItems, item)
 	}
 
+	//Below for register hooks automatically
 	stringToSearchAndAppend := "/** FOR GOKIT AUTO REGISTER ENTITY HOOKS HERE, DON'T EDIT THIS LINE **/"
 
 	if len(successItems) > 0 {

@@ -35,84 +35,86 @@ func listEntities(dir string) ([]string, error) {
 }
 
 func runCopyBaseEntity(cmd *cobra.Command, args []string) {
-	baseDir, ok := utils.GetGoKitRootPath()
-	if ok != nil {
-		fmt.Printf("Error getting GoKit root path: %v\n", ok)
-		return
-	}
-
-	currentDir, ok2 := utils.GetProjectRootPath()
-	if ok2 != nil {
-		fmt.Printf("Error getting current working directory: %v\n", ok2)
-		return
-	}
-
-	goKitSchemaDir := filepath.Join(baseDir, "ent", "schema")
-	projectSchemaDir := filepath.Join(currentDir, "ent", "schema")
-
-	entities, err := listEntities(goKitSchemaDir)
+	goKitRootPath, err := utils.GetGoKitRootPath()
 	if err != nil {
-		fmt.Printf("Error listing base schemas: %v\n", err)
+		fmt.Printf("Error getting GoKit root path: %v\n", err)
+		return
+	}
+
+	projectRootPath, err := utils.GetProjectRootPath()
+	if err != nil {
+		fmt.Printf("Error getting current working directory: %v\n", err)
+		return
+	}
+
+	goKitDir := filepath.Join(goKitRootPath, "ent", "schema")
+	projectDir := filepath.Join(projectRootPath, "ent", "schema")
+
+	items, err := listEntities(goKitDir)
+	if err != nil {
+		fmt.Printf("Error listing entity: %v\n", err)
+		return
+	}
+
+	fromModuleName, ok1 := utils.GetModuleName(goKitRootPath)
+	toModuleName, ok2 := utils.GetModuleName(projectRootPath)
+
+	if ok1 != nil || ok2 != nil {
+		fmt.Printf("Error getting module name: %v\n", err)
 		return
 	}
 
 	// Ensure the target directory exists
-	if err := os.MkdirAll(projectSchemaDir, os.ModePerm); err != nil {
-		fmt.Printf("Error creating directory %s: %v\n", projectSchemaDir, err)
+	if err := os.MkdirAll(projectDir, os.ModePerm); err != nil {
+		fmt.Printf("Error creating directory %s: %v\n", projectDir, err)
 	}
 
 	fmt.Println("Available entities to copy:")
-	for _, entity := range entities {
-		fmt.Printf(" - %s\n", entity)
+	for _, item := range items {
+		fmt.Printf(" - %s\n", item)
 	}
 
 	fmt.Print("Enter the entities to copy (comma-separated): ")
 	var input string
 	fmt.Scanln(&input)
-	selectedEntities := strings.Split(input, ",")
+	selectedItems := strings.Split(input, ",")
 
-	for _, entity := range selectedEntities {
-		entity = strings.TrimSpace(entity)
-		if entity == "" {
+	for _, item := range selectedItems {
+		item = strings.TrimSpace(item)
+		if item == "" {
 			continue
 		}
 
-		baseFile := filepath.Join(goKitSchemaDir, entity+".go")
-		targetFile := filepath.Join(projectSchemaDir, entity+".go")
+		baseFile := filepath.Join(goKitRootPath, item+".go")
+		targetFile := filepath.Join(projectRootPath, item+".go")
 
 		// Check if the entity already exists in the project
 		if utils.FileExists(targetFile) {
 			fmt.Printf("Make you you have back up your file if choose to overwrite\n")
-			fmt.Printf("Entity %s already exists in the project. Do you want to overwrite it? (y/n): ", entity)
+			fmt.Printf("Entity %s already exists in the project. Do you want to overwrite it? (y/n): ", item)
 			var response string
 			fmt.Scanln(&response)
 			response = strings.ToLower(strings.TrimSpace(response))
 			if response != "y" && response != "yes" {
-				fmt.Printf("Skipping %s.\n", entity)
+				fmt.Printf("Skipping %s.\n", item)
 				continue
 			}
 		}
 
-		fromModuleName, ok1 := utils.GetModuleName(baseDir)
-		toModuleName, ok2 := utils.GetModuleName(currentDir)
-
-		if ok1 != nil || ok2 != nil {
-			fmt.Printf("Error getting module name: %v\n", err)
-			continue
-		}
-
 		baseContent, err := os.ReadFile(baseFile)
 		if err != nil {
-			fmt.Printf("Error reading %s: %v\n", entity, err)
+			fmt.Printf("Error reading %s: %v\n", item, err)
 			continue
 		}
 
 		updatedContent := []byte(strings.ReplaceAll(string(baseContent), fromModuleName, toModuleName))
 
 		if err := os.WriteFile(targetFile, updatedContent, 0644); err != nil {
-			fmt.Printf("Error writing %s: %v\n", entity, err)
+			fmt.Printf("Error writing %s: %v\n", item, err)
 			continue
 		}
+
+		fmt.Printf("Successfully copied %s to the project.\n", item)
 	}
 
 	fmt.Printf("Remember to rebuild entity after copying mixins.\n")
