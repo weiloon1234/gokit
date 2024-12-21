@@ -8,8 +8,10 @@ import (
 	"image/png"
 	"mime/multipart"
 
-	"github.com/chai2010/webp"
 	"github.com/disintegration/imaging"
+	"github.com/kolesa-team/go-webp/decoder"
+	"github.com/kolesa-team/go-webp/encoder"
+	"github.com/kolesa-team/go-webp/webp"
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/tiff"
 )
@@ -54,7 +56,7 @@ func DecodeImage(fileHeader *multipart.FileHeader) (image.Image, string, error) 
 	if err != nil {
 		if format == "" {
 			file.Seek(0, 0) // Reset file pointer for WebP fallback
-			webpImg, webpErr := webp.Decode(file)
+			webpImg, webpErr := webp.Decode(file, &decoder.Options{})
 			if webpErr == nil {
 				return webpImg, "webp", nil
 			}
@@ -90,7 +92,11 @@ func EncodeImage(img image.Image, format string) (*bytes.Buffer, error) {
 			return nil, fmt.Errorf("failed to encode TIFF: %v", err)
 		}
 	case "webp":
-		err := webp.Encode(buf, img, nil)
+		options, err := encoder.NewLossyEncoderOptions(encoder.PresetDefault, 75)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create WebP encoder options: %v", err)
+		}
+		err = webp.Encode(buf, img, options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode WebP: %v", err)
 		}
