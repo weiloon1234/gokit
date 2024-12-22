@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
+	"github.com/weiloon1234/gokit/ent/hooks"
 	"github.com/weiloon1234/gokit/ent/mixin"
 )
 
@@ -36,9 +37,11 @@ func (Admin) Fields() []ent.Field {
 			Comment("Timestamp when email was verified"),
 		field.String("password").
 			NotEmpty().
+			Sensitive().
 			Comment("Password for the admin"),
 		field.String("password2").
 			NotEmpty().
+			Sensitive().
 			Comment("Second password for the admin"),
 		field.String("lang").
 			Default("en").
@@ -68,6 +71,13 @@ func (Admin) Fields() []ent.Field {
 func (Admin) Mixins() []ent.Mixin {
 	return []ent.Mixin{
 		mixin.SoftDeleteMixin{},
+	}
+}
+
+func (Admin) Hooks() []ent.Hook {
+	return []ent.Hook{
+		hooks.HashFieldHook("password"),
+		hooks.HashFieldHook("password2"),
 	}
 }
 

@@ -29,9 +29,9 @@ type User struct {
 	// Timestamp when email was verified
 	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
 	// Password for the user
-	Password string `json:"password,omitempty"`
+	Password string `json:"-"`
 	// Second password for the user
-	Password2 string `json:"password2,omitempty"`
+	Password2 string `json:"-"`
 	// Country ID of the user
 	CountryID *uint64 `json:"country_id,omitempty"`
 	// Contact country ID of the user
@@ -463,11 +463,9 @@ func (u *User) String() string {
 		builder.WriteString(v.Format(time.ANSIC))
 	}
 	builder.WriteString(", ")
-	builder.WriteString("password=")
-	builder.WriteString(u.Password)
+	builder.WriteString("password=<sensitive>")
 	builder.WriteString(", ")
-	builder.WriteString("password2=")
-	builder.WriteString(u.Password2)
+	builder.WriteString("password2=<sensitive>")
 	builder.WriteString(", ")
 	if v := u.CountryID; v != nil {
 		builder.WriteString("country_id=")

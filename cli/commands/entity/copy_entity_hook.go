@@ -132,7 +132,7 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 				" ",
 				"",
 			)
-			registerLine := fmt.Sprintf("hook.%s(entClient)\n", funcName)
+			registerLine := fmt.Sprintf("entClient.Use(hooks.%s())\n", funcName)
 			manualAppendMessage := fmt.Sprintf("Please register %s manually.\nRegister in main.go like this\n%s", item, registerLine)
 
 			for _, mainFilePath := range []string{
@@ -149,7 +149,7 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 
 				// Check and add imports if necessary
 				importsToAdd := map[string]string{
-					fmt.Sprintf("%s/ent/hook", toModuleName): "",
+					fmt.Sprintf("%s/ent/hooks", toModuleName): "",
 				}
 
 				originalContent, err = utils.FileAddImports(originalContent, importsToAdd)
