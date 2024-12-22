@@ -30,13 +30,16 @@ func SelectItems(items []string, message string) ([]string, error) {
 
 		// Display the menu
 		for i, item := range items {
-			prefix := "  " // Default prefix
-			if selected[i] {
-				prefix = "[*]" // Mark selected items
-			} else if i == currentIndex {
-				prefix = ">>" // Highlight current item
+			if i == currentIndex {
+				// Highlight the current row (e.g., inverted colors or background color)
+				fmt.Printf("\033[7m>> %s\033[0m\n", item) // \033[7m = reverse video mode, \033[0m = reset formatting
+			} else if selected[i] {
+				// Mark selected items
+				fmt.Printf("[*] %s\n", item)
+			} else {
+				// Default formatting
+				fmt.Printf("   %s\n", item)
 			}
-			fmt.Printf("%s %s\n", prefix, item)
 		}
 
 		// Capture key press
