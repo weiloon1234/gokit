@@ -2,6 +2,9 @@ package utils
 
 import (
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/eiannone/keyboard"
 )
@@ -14,7 +17,9 @@ func SelectItems(items []string, message string) ([]string, error) {
 	selected := make(map[int]bool) // Track selected items
 	currentIndex := 0              // Current highlighted index
 
-	fmt.Println("Use ↑/↓ to navigate, Space to select, Enter to confirm.")
+	// Channel to listen for interrupt signals
+	exitSignal := make(chan os.Signal, 1)
+	signal.Notify(exitSignal, os.Interrupt, syscall.SIGTERM)
 
 	// Open the keyboard for capturing input
 	if err := keyboard.Open(); err != nil {
@@ -22,10 +27,19 @@ func SelectItems(items []string, message string) ([]string, error) {
 	}
 	defer keyboard.Close()
 
+	go func() {
+		<-exitSignal // Wait for Ctrl+C
+		keyboard.Close()
+		fmt.Println("\nExiting...")
+		os.Exit(0)
+	}()
+
+	fmt.Println("Use ↑/↓ to navigate, Space to select, Enter to confirm, ESC to cancel.")
+
 	for {
 		// Clear the screen
 		fmt.Print("\033[H\033[2J")
-		fmt.Println("Use ↑/↓ to navigate, Space to select, Enter to confirm.")
+		fmt.Println("Use ↑/↓ to navigate, Space to select, Enter to confirm, ESC to cancel.")
 		fmt.Println()
 
 		// Display the menu
@@ -71,6 +85,7 @@ func SelectItems(items []string, message string) ([]string, error) {
 			return result, nil
 		case keyboard.KeyEsc:
 			// Exit on ESC
+			fmt.Println("\nOperation canceled.")
 			return nil, nil
 		}
 	}
