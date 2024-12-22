@@ -48,8 +48,8 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	goKitDir := filepath.Join(goKitRootPath, "ent", "hook")
-	projectDir := filepath.Join(projectRootPath, "ent", "hook")
+	goKitDir := filepath.Join(goKitRootPath, "ent", "hooks")
+	projectDir := filepath.Join(projectRootPath, "ent", "hooks")
 
 	items, err := listHooks(goKitDir)
 	if err != nil {
