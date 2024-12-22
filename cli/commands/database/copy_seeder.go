@@ -75,10 +75,11 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		fmt.Printf(" - %s\n", item)
 	}
 
-	fmt.Print("Enter the seeds to copy (comma-separated): ")
-	var input string
-	fmt.Scanln(&input)
-	selectedItems := strings.Split(input, ",")
+	selectedItems, err := utils.SelectItems(items)
+	if err != nil {
+		fmt.Printf("Error selecting seeds: %v\n", err)
+		return
+	}
 
 	var successItems []string
 	for _, item := range selectedItems {
