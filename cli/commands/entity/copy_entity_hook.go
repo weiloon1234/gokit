@@ -70,15 +70,11 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 		fmt.Printf("Error creating directory %s: %v\n", projectDir, err)
 	}
 
-	fmt.Println("Available hook to copy:")
-	for _, item := range items {
-		fmt.Printf(" - %s\n", item)
+	selectedItems, err := utils.SelectItems(items, "Select the hooks to copy:")
+	if err != nil {
+		fmt.Printf("Error selecting seeds: %v\n", err)
+		return
 	}
-
-	fmt.Print("Enter the hook to copy (comma-separated): ")
-	var input string
-	fmt.Scanln(&input)
-	selectedItems := strings.Split(input, ",")
 
 	var successItems []string
 	for _, item := range selectedItems {

@@ -69,15 +69,11 @@ func runCopyBaseEntity(cmd *cobra.Command, args []string) {
 		fmt.Printf("Error creating directory %s: %v\n", projectDir, err)
 	}
 
-	fmt.Println("Available entities to copy:")
-	for _, item := range items {
-		fmt.Printf(" - %s\n", item)
+	selectedItems, err := utils.SelectItems(items, "Select entity to copy:")
+	if err != nil {
+		fmt.Printf("Error selecting seeds: %v\n", err)
+		return
 	}
-
-	fmt.Print("Enter the entities to copy (comma-separated): ")
-	var input string
-	fmt.Scanln(&input)
-	selectedItems := strings.Split(input, ",")
 
 	for _, item := range selectedItems {
 		item = strings.TrimSpace(item)

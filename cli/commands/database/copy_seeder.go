@@ -70,12 +70,7 @@ func runCopyDatabaseSeeder(cmd *cobra.Command, args []string) {
 		fmt.Printf("Error creating directory %s: %v\n", projectDir, err)
 	}
 
-	fmt.Println("Available seeds to copy:")
-	for _, item := range items {
-		fmt.Printf(" - %s\n", item)
-	}
-
-	selectedItems, err := utils.SelectItems(items)
+	selectedItems, err := utils.SelectItems(items, "Select the seeds to copy:")
 	if err != nil {
 		fmt.Printf("Error selecting seeds: %v\n", err)
 		return

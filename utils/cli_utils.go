@@ -6,7 +6,11 @@ import (
 	"github.com/eiannone/keyboard"
 )
 
-func SelectItems(items []string) ([]string, error) {
+func SelectItems(items []string, message string) ([]string, error) {
+	if message != "" {
+		fmt.Println(message)
+	}
+
 	selected := make(map[int]bool) // Track selected items
 	currentIndex := 0              // Current highlighted index
 
