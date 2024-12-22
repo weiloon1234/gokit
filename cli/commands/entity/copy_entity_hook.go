@@ -121,67 +121,73 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 	stringToSearchAndAppend := "/** FOR GOKIT AUTO REGISTER ENTITY HOOKS HERE, DON'T EDIT THIS LINE **/"
 	missing := false
 
+	needRegister := []string{
+		"soft_delete_hook",
+	}
+
 	if len(successItems) > 0 {
 		fmt.Printf("======================\n")
 		var successMessages []string
 		var failureMessages []string
 
 		for _, item := range successItems {
-			funcName := strings.ReplaceAll(
-				cases.Title(language.English).String(strings.ReplaceAll(item, "_", " ")),
-				" ",
-				"",
-			)
-			registerLine := fmt.Sprintf("entClient.Use(hooks.%s())\n", funcName)
-			manualAppendMessage := fmt.Sprintf("Please register %s manually.\nRegister in main.go like this\n%s", item, registerLine)
+			if utils.Contains(needRegister, item) {
+				funcName := strings.ReplaceAll(
+					cases.Title(language.English).String(strings.ReplaceAll(item, "_", " ")),
+					" ",
+					"",
+				)
+				registerLine := fmt.Sprintf("entClient.Use(hooks.%s())\n", funcName)
+				manualAppendMessage := fmt.Sprintf("Please register %s manually.\nRegister in main.go like this\n%s", item, registerLine)
 
-			for _, mainFilePath := range []string{
-				filepath.Join(projectRootPath, "cmd", "cli", "main.go"),
-				filepath.Join(projectRootPath, "cmd", "web", "main.go"),
-			} {
-				fileContent, err := os.ReadFile(mainFilePath)
-				if err != nil {
-					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
-					continue
-				}
+				for _, mainFilePath := range []string{
+					filepath.Join(projectRootPath, "cmd", "cli", "main.go"),
+					filepath.Join(projectRootPath, "cmd", "web", "main.go"),
+				} {
+					fileContent, err := os.ReadFile(mainFilePath)
+					if err != nil {
+						failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+						continue
+					}
 
-				originalContent := string(fileContent)
+					originalContent := string(fileContent)
 
-				// Check and add imports if necessary
-				importsToAdd := map[string]string{
-					fmt.Sprintf("%s/ent/hooks", toModuleName): "",
-				}
+					// Check and add imports if necessary
+					importsToAdd := map[string]string{
+						fmt.Sprintf("%s/ent/hooks", toModuleName): "",
+					}
 
-				originalContent, err = utils.FileAddImports(originalContent, importsToAdd)
-				if err != nil {
-					failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
-					continue
-				}
+					originalContent, err = utils.FileAddImports(originalContent, importsToAdd)
+					if err != nil {
+						failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error reading %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+						continue
+					}
 
-				if strings.Contains(originalContent, registerLine) {
-					continue
-				} else {
-					if strings.Contains(originalContent, stringToSearchAndAppend) {
-						// Find the indentation before the stringToSearchAndAppend
-						lines := strings.Split(originalContent, "\n")
-						var indent string
-						for _, line := range lines {
-							if strings.Contains(line, stringToSearchAndAppend) {
-								indent = line[:strings.Index(line, stringToSearchAndAppend)]
-								break
+					if strings.Contains(originalContent, registerLine) {
+						continue
+					} else {
+						if strings.Contains(originalContent, stringToSearchAndAppend) {
+							// Find the indentation before the stringToSearchAndAppend
+							lines := strings.Split(originalContent, "\n")
+							var indent string
+							for _, line := range lines {
+								if strings.Contains(line, stringToSearchAndAppend) {
+									indent = line[:strings.Index(line, stringToSearchAndAppend)]
+									break
+								}
 							}
-						}
 
-						updatedContent := strings.Replace(originalContent, stringToSearchAndAppend, stringToSearchAndAppend+"\n"+indent+registerLine, 1)
-						if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
-							failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error writing to %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+							updatedContent := strings.Replace(originalContent, stringToSearchAndAppend, stringToSearchAndAppend+"\n"+indent+registerLine, 1)
+							if err := os.WriteFile(mainFilePath, []byte(updatedContent), 0644); err != nil {
+								failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: Error writing to %s: %v\n%s", mainFilePath, err, manualAppendMessage))
+								continue
+							}
+							successMessages = append(successMessages, fmt.Sprintf("Auto-register: %s registered in %s", item, mainFilePath))
+						} else {
+							failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: line not found in %s\n%s", mainFilePath, manualAppendMessage))
+							missing = true
 							continue
 						}
-						successMessages = append(successMessages, fmt.Sprintf("Auto-register: %s registered in %s", item, mainFilePath))
-					} else {
-						failureMessages = append(failureMessages, fmt.Sprintf("Auto-register: line not found in %s\n%s", mainFilePath, manualAppendMessage))
-						missing = true
-						continue
 					}
 				}
 			}
