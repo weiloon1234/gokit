@@ -84,7 +84,6 @@ func InitRouter(config config.Config) *gin.Engine {
 	}
 	router.Use(middleware.RealIPMiddleware())
 	router.Use(middleware.ErrorLoggingMiddleware())
-	router.Use(middleware.GlobalContextMiddleware())
 
 	return router
 }
