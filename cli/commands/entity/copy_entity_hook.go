@@ -57,10 +57,11 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fromModuleName, ok1 := utils.GetModuleName(goKitRootPath)
+	// fromModuleName, ok1 := utils.GetModuleName(goKitRootPath)
 	toModuleName, ok2 := utils.GetModuleName(projectRootPath)
 
-	if ok1 != nil || ok2 != nil {
+	// if ok1 != nil || ok2 != nil {
+	if ok2 != nil {
 		fmt.Printf("Error getting module name: %v\n", err)
 		return
 	}
@@ -104,9 +105,10 @@ func runCopyEntityHook(cmd *cobra.Command, args []string) {
 			continue
 		}
 
-		updatedContent := []byte(strings.ReplaceAll(string(baseContent), fromModuleName, toModuleName))
+		// updatedContent := []byte(strings.ReplaceAll(string(baseContent), fromModuleName, toModuleName))
 
-		if err := os.WriteFile(targetFile, updatedContent, 0644); err != nil {
+		// if err := os.WriteFile(targetFile, updatedContent, 0644); err != nil {
+		if err := os.WriteFile(targetFile, baseContent, 0644); err != nil {
 			fmt.Printf("Error writing %s: %v\n", item, err)
 			continue
 		}
