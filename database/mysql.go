@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"sync"
 
 	"reflect"
 	"time"
@@ -19,6 +20,7 @@ import (
 var (
 	sqlDB          *sql.DB      // Save the raw database connection for later management
 	entClient      *interface{} // Use an interface to avoid direct dependency on the ent package
+	hooksMutex     sync.Mutex
 	GlobalDBConfig *config.DBConfig
 )
 
@@ -57,6 +59,14 @@ func GetSQLDB() *sql.DB {
 }
 
 func SetEntClient(client interface{}) {
+	hooksMutex.Lock()
+	defer hooksMutex.Unlock()
+
+	if entClient != nil {
+		logger.GetLogger().Printf("Ent client already set, skipping reinitialization")
+		return
+	}
+
 	entClient = &client
 }
 
