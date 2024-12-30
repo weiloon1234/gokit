@@ -8,6 +8,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type contextKey string
+
+const GinCtxKey contextKey = "GinCtxKey"
+
 var ctxStore sync.Map
 
 // GenerateRequestID generates a unique request ID.
@@ -34,7 +38,7 @@ func ClearContext(requestID string) {
 }
 
 func GetGinContext(ctx context.Context) *gin.Context {
-	if ginCtx, ok := ctx.Value("gin_context").(*gin.Context); ok {
+	if ginCtx, ok := ctx.Value(GinCtxKey).(*gin.Context); ok {
 		return ginCtx
 	}
 	return nil
